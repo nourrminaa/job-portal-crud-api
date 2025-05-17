@@ -11,6 +11,6 @@ public class HelloController {
     @GetMapping("/")
     public String hello() {
         // Return a simple message that will be sent as the response
-        return "Hello from Spring!";
+        return "Hello from Spring!! (Only for testing connectivity)";
     }
 }
