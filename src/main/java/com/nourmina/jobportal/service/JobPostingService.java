@@ -96,11 +96,6 @@ public class JobPostingService {
         jobPostingRepository.delete(jobPosting);
     }
 
-    /**
-     * Get the recruiter ID from an email address
-     * @param email the email address
-     * @return the recruiter ID
-     */
     public String getRecruiterIdFromEmail(String email) {
         return recruiterRepository.findByEmail(email)
                 .map(Recruiter::getId)

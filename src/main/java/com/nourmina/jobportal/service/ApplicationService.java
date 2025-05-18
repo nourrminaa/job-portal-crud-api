@@ -10,12 +10,16 @@ import com.nourmina.jobportal.repository.ApplicationRepository;
 import com.nourmina.jobportal.repository.CandidateRepository;
 import com.nourmina.jobportal.repository.JobPostingRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ApplicationService {
@@ -33,6 +37,10 @@ public class ApplicationService {
         return applicationRepository.findAll();
     }
 
+    public Page<Application> getAllApplicationsWithPagination(Pageable pageable) {
+        return applicationRepository.findAll(pageable);
+    }
+
     public Application getApplicationById(String id) {
         return applicationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Application not found with id: " + id));
@@ -43,9 +51,59 @@ public class ApplicationService {
         return mapToApplicationResponseDTOs(applications);
     }
 
+    public Page<ApplicationResponseDTO> getApplicationsByCandidateWithPagination(String candidateId, Pageable pageable) {
+        // This implementation is a bit inefficient as MongoDB repository doesn't directly support
+        // converting the results to DTOs with pagination. In a production environment, you'd want to optimize this.
+
+        // Get all applications for the candidate
+        List<Application> applications = applicationRepository.findByCandidateId(candidateId);
+
+        // Convert to DTOs
+        List<ApplicationResponseDTO> dtos = mapToApplicationResponseDTOs(applications);
+
+        // Manual pagination
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), dtos.size());
+
+        // If start exceeds list size, return empty page
+        if (start >= dtos.size()) {
+            return new PageImpl<>(new ArrayList<>(), pageable, dtos.size());
+        }
+
+        // Create sublist for current page
+        List<ApplicationResponseDTO> pageContent = dtos.subList(start, end);
+
+        return new PageImpl<>(pageContent, pageable, dtos.size());
+    }
+
     public List<ApplicationResponseDTO> getApplicationsByJobPosting(String jobPostingId) {
         List<Application> applications = applicationRepository.findByJobPostingId(jobPostingId);
         return mapToApplicationResponseDTOs(applications);
+    }
+
+    public Page<ApplicationResponseDTO> getApplicationsByJobPostingWithPagination(String jobPostingId, Pageable pageable) {
+        // This implementation is a bit inefficient as MongoDB repository doesn't directly support
+        // converting the results to DTOs with pagination. In a production environment, you'd want to optimize this.
+
+        // Get all applications for the job posting
+        List<Application> applications = applicationRepository.findByJobPostingId(jobPostingId);
+
+        // Convert to DTOs
+        List<ApplicationResponseDTO> dtos = mapToApplicationResponseDTOs(applications);
+
+        // Manual pagination
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), dtos.size());
+
+        // If start exceeds list size, return empty page
+        if (start >= dtos.size()) {
+            return new PageImpl<>(new ArrayList<>(), pageable, dtos.size());
+        }
+
+        // Create sublist for current page
+        List<ApplicationResponseDTO> pageContent = dtos.subList(start, end);
+
+        return new PageImpl<>(pageContent, pageable, dtos.size());
     }
 
     public List<Application> getApplicationsByStatus(String status) {

@@ -8,13 +8,17 @@ import com.nourmina.jobportal.security.CurrentUser;
 import com.nourmina.jobportal.service.ApplicationService;
 import com.nourmina.jobportal.service.SecurityService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -29,8 +33,16 @@ public class ApplicationController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<Application>> getAllApplications() {
-        List<Application> applications = applicationService.getAllApplications();
+    public ResponseEntity<Page<Application>> getAllApplications(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "appliedDate") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDirection) {
+
+        Sort.Direction direction = sortDirection.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+
+        Page<Application> applications = applicationService.getAllApplicationsWithPagination(pageable);
         return ResponseEntity.ok(applications);
     }
 
@@ -43,23 +55,50 @@ public class ApplicationController {
 
     @GetMapping("/candidate/{candidateId}")
     @PreAuthorize("hasRole('ADMIN') or @securityService.isCurrentUser(#candidateId)")
-    public ResponseEntity<List<ApplicationResponseDTO>> getApplicationsByCandidate(@PathVariable String candidateId) {
-        List<ApplicationResponseDTO> applications = applicationService.getApplicationsByCandidate(candidateId);
+    public ResponseEntity<Page<ApplicationResponseDTO>> getApplicationsByCandidate(
+            @PathVariable String candidateId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "appliedDate") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDirection) {
+
+        Sort.Direction direction = sortDirection.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+
+        Page<ApplicationResponseDTO> applications = applicationService.getApplicationsByCandidateWithPagination(candidateId, pageable);
         return ResponseEntity.ok(applications);
     }
 
     @GetMapping("/job-posting/{jobPostingId}")
     @PreAuthorize("hasRole('ADMIN') or @securityService.isJobPostingRecruiter(#jobPostingId)")
-    public ResponseEntity<List<ApplicationResponseDTO>> getApplicationsByJobPosting(@PathVariable String jobPostingId) {
-        List<ApplicationResponseDTO> applications = applicationService.getApplicationsByJobPosting(jobPostingId);
+    public ResponseEntity<Page<ApplicationResponseDTO>> getApplicationsByJobPosting(
+            @PathVariable String jobPostingId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "appliedDate") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDirection) {
+
+        Sort.Direction direction = sortDirection.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+
+        Page<ApplicationResponseDTO> applications = applicationService.getApplicationsByJobPostingWithPagination(jobPostingId, pageable);
         return ResponseEntity.ok(applications);
     }
 
     @GetMapping("/my-applications")
     @PreAuthorize("hasRole('CANDIDATE')")
-    public ResponseEntity<List<ApplicationResponseDTO>> getCurrentUserApplications(@CurrentUser UserDetails currentUser) {
+    public ResponseEntity<Page<ApplicationResponseDTO>> getCurrentUserApplications(
+            @CurrentUser UserDetails currentUser,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "appliedDate") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDirection) {
+
         String candidateId = securityService.getCurrentUserId(currentUser);
-        List<ApplicationResponseDTO> applications = applicationService.getApplicationsByCandidate(candidateId);
+        Sort.Direction direction = sortDirection.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+
+        Page<ApplicationResponseDTO> applications = applicationService.getApplicationsByCandidateWithPagination(candidateId, pageable);
         return ResponseEntity.ok(applications);
     }
 
