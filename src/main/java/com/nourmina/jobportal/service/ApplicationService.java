@@ -1,10 +1,11 @@
 package com.nourmina.jobportal.service;
 
 import com.nourmina.jobportal.model.Application;
-
-import java.util.List;
+import java.util.ArrayList;
 
 public interface ApplicationService {
-    Application updateApplicationStatus(String appId, String status);
-    List<Application> findApplicationsByCandidateId(String candidateId);
+    void updateApplicationStatus(String appId, String status);
+    ArrayList<Application> findApplicationsByCandidateId(String candidateId);
+    void loadApplications(ArrayList<Application> apps);
+    ArrayList<Application> getAllApplications();
 }

@@ -13,6 +13,8 @@ public class JobPosting {
     private String location;
     private ArrayList<String> requiredSkills;
     private String recruiterId;
+    private double salary;
+    private String company;
 
     // Constructors
     public JobPosting() {
@@ -44,4 +46,10 @@ public class JobPosting {
 
     public String getRecruiterId() { return recruiterId; }
     public void setRecruiterId(String recruiterId){ this.recruiterId = recruiterId; }
+
+    public double getSalary() { return salary; }
+    public void setSalary(double salary) { this.salary = salary;}
+
+    public String getCompany() { return company; }
+    public void setCompany(String company) { this.company = company; }
 }

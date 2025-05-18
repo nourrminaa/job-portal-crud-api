@@ -1,83 +1,86 @@
 package com.nourmina.jobportal.service.impl;
 
-// Importing model classes (data objects)
-import com.nourmina.jobportal.model.Candidate;
-import com.nourmina.jobportal.model.Application;
-import com.nourmina.jobportal.model.JobPosting;
-
-// Importing repository interfaces (for database access)
-import com.nourmina.jobportal.repository.CandidateRepository;
-import com.nourmina.jobportal.repository.JobPostingRepository;
-import com.nourmina.jobportal.repository.ApplicationRepository;
-
-// Importing service interface and custom exception
-import com.nourmina.jobportal.service.CandidateService;
 import com.nourmina.jobportal.exception.ResourceNotFoundException;
-
-// Spring annotations for dependency injection and service registration
-import com.nourmina.jobportal.service.JobPostingService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.nourmina.jobportal.exception.BadRequestException;
+import com.nourmina.jobportal.model.Application;
+import com.nourmina.jobportal.model.Candidate;
+import com.nourmina.jobportal.model.JobPosting;
+import com.nourmina.jobportal.service.CandidateService;
+import com.nourmina.jobportal.validation.CandidateValidator;
+import com.nourmina.jobportal.validation.JobPostingValidator;
 import org.springframework.stereotype.Service;
 
-@Service // Tells Spring this class provides business logic and should be managed as a service
+import java.util.ArrayList;
+import java.util.Optional;
+
+@Service
 public class CandidateServiceImpl implements CandidateService {
 
-    // Repositories needed to interact with the database
-    private final CandidateRepository candidateRepository;
-    private final JobPostingRepository jobPostingRepository;
-    private final ApplicationRepository applicationRepository;
+    private final ArrayList<Candidate> candidates = new ArrayList<>();
+    private final ArrayList<JobPosting> jobPostings;
+    private final ArrayList<Application> applications;
 
-    @Autowired // Spring will automatically inject the required repositories through the constructor
-    public CandidateServiceImpl(CandidateRepository candidateRepository,
-                                JobPostingRepository jobPostingRepository,
-                                ApplicationRepository applicationRepository) {
-        this.candidateRepository = candidateRepository;
-        this.jobPostingRepository = jobPostingRepository;
-        this.applicationRepository = applicationRepository;
+    public CandidateServiceImpl(ArrayList<JobPosting> jobPostings, ArrayList<Application> applications) {
+        this.jobPostings = jobPostings;
+        this.applications = applications;
     }
 
     @Override
     public Candidate registerCandidate(Candidate candidate) {
-        // Save the candidate to the database (you can also validate fields or encode password here)
-        return candidateRepository.save(candidate);
+        CandidateValidator.validate(candidate);
+
+        boolean emailExists = candidates.stream()
+                .anyMatch(c -> c.getEmail().equalsIgnoreCase(candidate.getEmail()));
+        if (emailExists) {
+            throw new BadRequestException("Candidate email already registered");
+        }
+        candidates.add(candidate);
+        return candidate;
     }
 
     @Override
-    public Candidate getCandidateById(String id) {
-        // Try to find the candidate by ID; if not found, throw a custom exception
-        return candidateRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Candidate not found"));
+    public Optional<Candidate> findById(String id) {
+        return candidates.stream()
+                .filter(c -> c.getId().equals(id))
+                .findFirst();
     }
 
     @Override
     public Candidate updateProfile(String id, Candidate updatedCandidate) {
-        // Get the existing candidate by ID
-        Candidate existing = getCandidateById(id);
+        CandidateValidator.validate(updatedCandidate);
 
-        // Update fields of the existing candidate (currently only the name; more can be added)
+        Candidate existing = findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Candidate not found"));
+
         existing.setFirstName(updatedCandidate.getFirstName());
         existing.setLastName(updatedCandidate.getLastName());
-
-        // Save the updated candidate back to the database
-        return candidateRepository.save(existing);
+        existing.setResume(updatedCandidate.getResume());
+        existing.setSkills(updatedCandidate.getSkills());
+        return existing;
     }
 
     @Override
     public Application applyToJob(String candidateId, String jobId) {
-        // Find the candidate by ID (or throw an error if not found)
-        Candidate candidate = getCandidateById(candidateId);
+        Candidate candidate = findById(candidateId)
+                .orElseThrow(() -> new ResourceNotFoundException("Candidate not found"));
 
-        // Find the job by ID (or throw an error if not found)
-        JobPosting jobPosting = jobPostingRepository.findById(jobId)
+        JobPosting jobPosting = jobPostings.stream()
+                .filter(j -> j.getId().equals(jobId))
+                .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found"));
 
-        // Create a new job application and link it to the candidate and job
+        // Optional: You could validate jobPosting here if needed
+        JobPostingValidator.validate(jobPosting);
+
         Application app = new Application();
         app.setCandidateId(candidate.getId());
         app.setJobPostingId(jobPosting.getId());
-        app.setStatus("PENDING"); // Set the initial status to PENDING
+        app.setStatus("PENDING");
+        applications.add(app);
+        return app;
+    }
 
-        // Save the application in the database
-        return applicationRepository.save(app);
+    public ArrayList<Candidate> getAllCandidates() {
+        return candidates;
     }
 }

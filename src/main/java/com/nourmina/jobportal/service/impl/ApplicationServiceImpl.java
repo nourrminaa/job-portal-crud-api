@@ -1,48 +1,52 @@
 package com.nourmina.jobportal.service.impl;
 
-// Importing the Application model (represents a job application)
 import com.nourmina.jobportal.model.Application;
-
-// Repository to interact with the Application data in the database
-import com.nourmina.jobportal.repository.ApplicationRepository;
-
-// Interface that this class implements (defines what services it provides)
 import com.nourmina.jobportal.service.ApplicationService;
-
-// Custom exception thrown if an application is not found
-import com.nourmina.jobportal.exception.ResourceNotFoundException;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import com.nourmina.jobportal.cache.DataCache;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 
-@Service // Marks this class as a Spring service (used for business logic)
+@Service
 public class ApplicationServiceImpl implements ApplicationService {
 
-    private final ApplicationRepository applicationRepository; // Database access for applications
+    private final DataCache dataCache;
 
-    @Autowired // Spring will automatically inject the repository here
-    public ApplicationServiceImpl(ApplicationRepository applicationRepository) {
-        this.applicationRepository = applicationRepository;
+    public ApplicationServiceImpl(DataCache dataCache) {
+        this.dataCache = dataCache;
     }
 
     @Override
-    public Application updateApplicationStatus(String appId, String status) {
-        // Find the application by ID, or throw an error if it doesn't exist
-        Application application = applicationRepository.findById(appId)
-                .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
-
-        // Update the status of the application (e.g., from PENDING to ACCEPTED)
-        application.setStatus(status);
-
-        // Save and return the updated application
-        return applicationRepository.save(application);
+    public void updateApplicationStatus(String applicationId, String newStatus) {
+        for (Application application : dataCache.getApplications()) {
+            if (application.getId() != null && application.getId().equals(applicationId)) {
+                application.setStatus(newStatus);
+                return;
+            }
+        }
+        System.out.println("Application not found.");
     }
 
     @Override
     public ArrayList<Application> findApplicationsByCandidateId(String candidateId) {
-        // Return all applications submitted by the candidate with this ID
-        return new ArrayList<Application>(applicationRepository.findByCandidateId(candidateId));
+        ArrayList<Application> result = new ArrayList<>();
+        for (Application app : dataCache.getApplications()) {
+            // Null-safe check to avoid NullPointerException
+            if (app.getCandidateId() != null && app.getCandidateId().equals(candidateId)) {
+                result.add(app);
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public void loadApplications(ArrayList<Application> apps) {
+        dataCache.getApplications().clear();
+        dataCache.getApplications().addAll(apps);
+    }
+
+    @Override
+    public ArrayList<Application> getAllApplications() {
+        return new ArrayList<>(dataCache.getApplications());
     }
 }

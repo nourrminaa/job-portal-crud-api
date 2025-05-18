@@ -1,41 +1,65 @@
 package com.nourmina.jobportal.service.impl;
 
-// Importing the Job model class (represents a job posting)
 import com.nourmina.jobportal.model.JobPosting;
-
-// Importing the repository to fetch/store Job data
-import com.nourmina.jobportal.repository.JobPostingRepository;
-
-// Importing the service interface that defines our contract
 import com.nourmina.jobportal.service.JobPostingService;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 
-@Service  // Marks this class as a Spring service component
+@Service
 public class JobPostingServiceImpl implements JobPostingService {
 
-    // Repository used for database operations on Job entities
-    private final JobPostingRepository jobPostingRepository;
-
-    @Autowired // Spring will inject the JobRepository implementation here
-    public JobPostingServiceImpl(JobPostingRepository jobPostingRepository) {
-        this.jobPostingRepository = jobPostingRepository;
-    }
+    private final ArrayList<JobPosting> jobPostings = new ArrayList<>();
 
     @Override
     public ArrayList<JobPosting> listJobs() {
-        // Retrieve all jobs from the database
-        // findAll() returns a List<Job>, so we wrap it in an ArrayList
-        return new ArrayList<JobPosting>(jobPostingRepository.findAll());
+        return new ArrayList<>(jobPostings);
     }
 
     @Override
     public ArrayList<JobPosting> searchJobs(String keyword) {
-        // Search for jobs whose title contains the keyword (case-insensitive)
-        // findByTitleContainingIgnoreCase handles the query, then we wrap result in ArrayList
-        return new ArrayList<JobPosting>(jobPostingRepository.findByTitleContainingIgnoreCase(keyword));
+        ArrayList<JobPosting> result = new ArrayList<>();
+        for (JobPosting job : jobPostings) {
+            if (job.getTitle().toLowerCase().contains(keyword.toLowerCase())) {
+                result.add(job);
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public void loadJobPostings(ArrayList<JobPosting> jobs) {
+        jobPostings.clear();
+        jobPostings.addAll(jobs);
+    }
+
+    @Override
+    public ArrayList<JobPosting> getAllJobPostings() {
+        return jobPostings;
+    }
+
+    // Simple beginner-friendly sorting method: sort by salary ascending
+    public ArrayList<JobPosting> sortJobsBySalary() {
+        ArrayList<JobPosting> sorted = new ArrayList<>(jobPostings);
+        sorted.sort(Comparator.comparingDouble(JobPosting::getSalary));
+        return sorted;
+    }
+
+    // Simple beginner-friendly pagination method for job postings
+    // pageNumber starts at 1
+    public ArrayList<JobPosting> paginateJobs(int pageNumber, int pageSize) {
+        ArrayList<JobPosting> paginated = new ArrayList<>();
+        int start = (pageNumber - 1) * pageSize;
+        int end = Math.min(start + pageSize, jobPostings.size());
+
+        if (start >= jobPostings.size() || start < 0) {
+            return paginated; // empty list for invalid page
+        }
+
+        for (int i = start; i < end; i++) {
+            paginated.add(jobPostings.get(i));
+        }
+        return paginated;
     }
 }

@@ -2,6 +2,7 @@ package com.nourmina.jobportal.model;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import java.time.LocalDate;
 
 @Document  // This tells Spring to save this class as a MongoDB document
 public class Application {
@@ -16,6 +17,7 @@ public class Application {
     private String candidateId;  // ID of the candidate applying for the job
     private String jobPostingId; // ID of the job the candidate applied to
     private String status;       // The current status of the application
+    private LocalDate applicationDate;
 
     // Constructor
     public Application() {
@@ -26,6 +28,7 @@ public class Application {
         this.candidateId = candidateId;
         this.jobPostingId = jobPostingId;
         this.status = status;
+        this.applicationDate = LocalDate.now(); // Set the application date to today
     }
 
     // Getters and setters
@@ -47,4 +50,6 @@ public class Application {
             this.status = status;
         }
     }
+
+    public LocalDate getApplicationDate() { return applicationDate; }
 }

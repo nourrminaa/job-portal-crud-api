@@ -2,7 +2,9 @@ package com.nourmina.jobportal.model;
 
 import org.springframework.data.mongodb.core.mapping.Document;
 
-@Document  // Marks this class as a MongoDB document
+import java.util.ArrayList;
+
+@Document(collection = "users") // Marks this class as a MongoDB document
 public class Recruiter extends User {
 
     private String company;        // Company name the recruiter works for
@@ -16,7 +18,8 @@ public class Recruiter extends User {
     }
 
     public Recruiter(String fname, String lname, String email, String password, String company, String contactInfo) {
-        super(fname, lname, email, password);
+        super(fname, lname, email, password, new ArrayList<>());
+        this.roles.add("ROLE_RECRUITER");
         this.company = company;
         this.contactInfo = contactInfo;
     }

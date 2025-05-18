@@ -3,7 +3,7 @@ package com.nourmina.jobportal.model;
 import org.springframework.data.mongodb.core.mapping.Document;
 import java.util.ArrayList;
 
-@Document  // Indicates this class will be saved as a document in a MongoDB collection
+@Document(collection = "users")  // Same collection
 public class Candidate extends User {
 
     private String resume;  // Path or content of the candidate's resume
@@ -15,7 +15,8 @@ public class Candidate extends User {
     }
 
     public Candidate(String fname, String lname, String email, String password, String resume, ArrayList<String> skills) {
-        super(fname, lname, email, password);
+        super(fname, lname, email, password, new ArrayList<>());
+        this.roles.add("ROLE_CANDIDATE");
         this.resume = resume;
         this.skills = skills;
     }
