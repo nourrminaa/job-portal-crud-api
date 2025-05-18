@@ -1,13 +1,9 @@
 package com.nourmina.jobportal.service;
 
-import com.nourmina.jobportal.dto.ApplicationDTO;
-import com.nourmina.jobportal.dto.ApplicationResponseDTO;
 import com.nourmina.jobportal.exception.ResourceNotFoundException;
 import com.nourmina.jobportal.model.Application;
-import com.nourmina.jobportal.model.Candidate;
-import com.nourmina.jobportal.model.JobPosting;
+import com.nourmina.jobportal.model.Job;
 import com.nourmina.jobportal.repository.ApplicationRepository;
-import com.nourmina.jobportal.repository.CandidateRepository;
 import com.nourmina.jobportal.repository.JobPostingRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,7 +41,7 @@ public class ApplicationServiceTest {
     private Application application;
     private ApplicationDTO applicationDTO;
     private Candidate candidate;
-    private JobPosting jobPosting;
+    private Job jobPosting;
 
     @BeforeEach
     public void setUp() {
@@ -66,7 +62,7 @@ public class ApplicationServiceTest {
 
         // Set up test job posting
         ArrayList<String> skills = new ArrayList<>(Arrays.asList("Java", "Spring", "MongoDB"));
-        jobPosting = new JobPosting("Java Developer", "Job description", "New York", skills, "recruiter123");
+        jobPosting = new Job("Java Developer", "Job description", "New York", skills, "recruiter123");
         jobPosting.setId("job123");
         jobPosting.setCompany("TechCorp");
     }

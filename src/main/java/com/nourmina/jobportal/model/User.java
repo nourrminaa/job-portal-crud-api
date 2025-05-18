@@ -1,109 +1,127 @@
-package com.nourmina.jobportal.model;
+package com.example.jobportal.model;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.index.Indexed;
-import org.springframework.data.mongodb.core.mapping.Field;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 
-import java.util.Collection;
-import java.util.Collections;
+import java.time.LocalDateTime;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
-// Single collection for User, Candidate, Recruiter
-@Document(collection = "users")   // Tells Spring this class should be stored as a document in MongoDB
-public class User implements UserDetails {
-
-    @Id  // Marks 'id' as the unique identifier for MongoDB document
+@Document(collection = "users")
+public class User {
+    @Id
     private String id;
 
-    private String fname;
-    private String lname;
+    @NotBlank(message = "Name is required")
+    private String name;
 
-    @Field("email")
-    @Indexed(unique = true)  // Mongo uniqueness enforced at DB level
-    private String email;     // The user's email address (should be unique)
+    @NotBlank(message = "Email is required")
+    @Email(message = "Email should be valid")
+    private String email;
 
-    private String password;  // The user's password (stored hashed)
-    private String role; // Role (e.g., CANDIDATE, RECRUITER)
+    @NotBlank(message = "Password is required")
+    private String password;
 
-    // Constructors
+    private String role; // ADMIN, RECRUITER, CANDIDATE
+    private String company; // For recruiters
+    private String skills; // For candidates
+    private String resume; // URL to resume for candidates
+
+    private LocalDateTime createdAt;
+
     public User() {
-        this(null, null, null, null, null);
+        this.createdAt = LocalDateTime.now();
     }
 
-    public User(String fname, String lname, String email, String password, String role) {
-        this.fname = fname;
-        this.lname = lname;
+    public User(String name, String email, String password, String role) {
+        this.name = name;
         this.email = email;
         this.password = password;
         this.role = role;
+        this.createdAt = LocalDateTime.now();
     }
 
-    // Getter and setter methods
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-
-    public String getFirstName() { return fname; }
-    public void setFirstName(String fname) { this.fname = fname; }
-
-    public String getLastName() { return lname; }
-    public void setLastName(String lname) { this.lname = lname; }
-
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
-    public void setPassword(String password) { this.password = password; }
-    @Override
-    public String getPassword() { return password; }
-
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
-
-    @Override
-    public String getUsername() {
-        return email; // Using email as username for authentication
+    // Getters and Setters
+    public String getId() {
+        return id;
     }
 
-    @Override
-    public boolean isAccountNonExpired() {
-        return true;
+    public void setId(String id) {
+        this.id = id;
     }
 
-    @Override
-    public boolean isAccountNonLocked() {
-        return true;
+    public String getName() {
+        return name;
     }
 
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
+    public void setName(String name) {
+        this.name = name;
     }
 
-    @Override
-    public boolean isEnabled() {
-        return true;
+    public String getEmail() {
+        return email;
     }
 
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Simple implementation: no roles/authorities for now
-        return Collections.emptyList(); // or implement real roles later
+    public void setEmail(String email) {
+        this.email = email;
     }
 
-    // Passowords were excluded on purpose !!!
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public String getCompany() {
+        return company;
+    }
+
+    public void setCompany(String company) {
+        this.company = company;
+    }
+
+    public String getSkills() {
+        return skills;
+    }
+
+    public void setSkills(String skills) {
+        this.skills = skills;
+    }
+
+    public String getResume() {
+        return resume;
+    }
+
+    public void setResume(String resume) {
+        this.resume = resume;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
     @Override
     public String toString() {
-        return "ID: " + id + "\n" +
-                "Name: " + fname + " " + lname + "\n" +
-                "Email: " + email + "\n" +
-                "Role: " + role;
+        return "User{" +
+                "id='" + id + '\'' +
+                ", name='" + name + '\'' +
+                ", email='" + email + '\'' +
+                ", role='" + role + '\'' +
+                ", company='" + company + '\'' +
+                '}';
     }
 }

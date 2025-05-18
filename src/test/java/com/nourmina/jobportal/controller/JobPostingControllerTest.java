@@ -1,11 +1,8 @@
 package com.nourmina.jobportal.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nourmina.jobportal.dto.JobPostingDTO;
-import com.nourmina.jobportal.model.JobPosting;
-import com.nourmina.jobportal.security.JwtTokenProvider;
+import com.nourmina.jobportal.model.Job;
 import com.nourmina.jobportal.service.JobPostingService;
-import com.nourmina.jobportal.service.SecurityService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,7 +42,7 @@ public class JobPostingControllerTest {
     @MockBean
     private JwtTokenProvider jwtTokenProvider;
 
-    private JobPosting jobPosting;
+    private Job jobPosting;
     private JobPostingDTO jobPostingDTO;
     private ObjectMapper objectMapper = new ObjectMapper();
 
@@ -53,7 +50,7 @@ public class JobPostingControllerTest {
     public void setUp() {
         // Set up test job posting
         ArrayList<String> skills = new ArrayList<>(Arrays.asList("Java", "Spring", "MongoDB"));
-        jobPosting = new JobPosting("Java Developer", "Job description", "New York", skills, "recruiter123");
+        jobPosting = new Job("Java Developer", "Job description", "New York", skills, "recruiter123");
         jobPosting.setId("job123");
         jobPosting.setCompany("TechCorp");
         jobPosting.setSalary(80000.0);
@@ -71,8 +68,8 @@ public class JobPostingControllerTest {
 
     @Test
     public void shouldGetAllJobPostings() throws Exception {
-        List<JobPosting> jobPostings = Arrays.asList(jobPosting);
-        PageImpl<JobPosting> page = new PageImpl<>(jobPostings);
+        List<Job> jobPostings = Arrays.asList(jobPosting);
+        PageImpl<Job> page = new PageImpl<>(jobPostings);
 
         when(jobPostingService.getAllJobPostings(any(Pageable.class))).thenReturn(page);
 

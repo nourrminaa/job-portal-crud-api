@@ -1,10 +1,9 @@
-package com.nourmina.jobportal.service;
+package com.example.jobportal.service;
 
-import com.nourmina.jobportal.exception.ResourceNotFoundException;
-import com.nourmina.jobportal.model.User;
-import com.nourmina.jobportal.repository.UserRepository;
+import com.example.jobportal.model.User;
+import com.example.jobportal.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,26 +15,13 @@ public class UserService {
     private UserRepository userRepository;
 
     @Autowired
-    private BCryptPasswordEncoder passwordEncoder;
+    private PasswordEncoder passwordEncoder;
 
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
-    }
-
-    public User getUserById(String id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
-    }
-
-    public User getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
-    }
-
+    // Create a new user
     public User createUser(User user) {
-        // Check if user with email already exists
-        if (userRepository.existsByEmail(user.getEmail())) {
-            throw new IllegalArgumentException("Email already in use: " + user.getEmail());
+        // Check if email already exists
+        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+            throw new IllegalArgumentException("Email already exists");
         }
 
         // Encode password
@@ -44,23 +30,61 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    public User updateUser(String id, User userDetails) {
-        User user = getUserById(id);
-
-        // Update fields
-        user.setFirstName(userDetails.getFirstName());
-        user.setLastName(userDetails.getLastName());
-
-        // Only update password if it's provided
-        if (userDetails.getPassword() != null && !userDetails.getPassword().isEmpty()) {
-            user.setPassword(passwordEncoder.encode(userDetails.getPassword()));
-        }
-
-        return userRepository.save(user);
+    // Get user by ID
+    public User getUserById(String id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
     }
 
+    // Get user by email
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+    }
+
+    // Update user
+    public User updateUser(String id, User updatedUser) {
+        User existingUser = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+
+        // Update fields
+        existingUser.setName(updatedUser.getName());
+
+        // Update role-specific fields
+        if ("RECRUITER".equals(existingUser.getRole())) {
+            existingUser.setCompany(updatedUser.getCompany());
+        } else if ("CANDIDATE".equals(existingUser.getRole())) {
+            existingUser.setSkills(updatedUser.getSkills());
+            existingUser.setResume(updatedUser.getResume());
+        }
+
+        // Only update password if provided
+        if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
+            existingUser.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
+        }
+
+        return userRepository.save(existingUser);
+    }
+
+    // Delete user
     public void deleteUser(String id) {
-        User user = getUserById(id);
-        userRepository.delete(user);
+        userRepository.deleteById(id);
+    }
+
+    // Get users by role
+    public List<User> getUsersByRole(String role) {
+        return userRepository.findByRole(role);
+    }
+
+    // Authenticate user (for login)
+    public User authenticate(String email, String password) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new RuntimeException("Invalid email or password");
+        }
+
+        return user;
     }
 }

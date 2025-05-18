@@ -1,6 +1,6 @@
 package com.nourmina.jobportal.repository;
 
-import com.nourmina.jobportal.model.JobPosting;
+import com.nourmina.jobportal.model.Job;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +28,7 @@ public class JobPostingRepositoryTest {
         jobPostingRepository.deleteAll();
 
         // Create test job postings
-        JobPosting job1 = new JobPosting(
+        Job job1 = new Job(
                 "Java Developer",
                 "Experienced Java developer needed",
                 "New York",
@@ -38,7 +38,7 @@ public class JobPostingRepositoryTest {
         job1.setSalary(80000.0);
         job1.setStatus("ACTIVE");
 
-        JobPosting job2 = new JobPosting(
+        Job job2 = new Job(
                 "Senior Python Engineer",
                 "Looking for Python expert with machine learning experience",
                 "San Francisco",
@@ -48,7 +48,7 @@ public class JobPostingRepositoryTest {
         job2.setSalary(120000.0);
         job2.setStatus("ACTIVE");
 
-        JobPosting job3 = new JobPosting(
+        Job job3 = new Job(
                 "Frontend Developer",
                 "Frontend developer with React experience",
                 "New York",
@@ -64,17 +64,17 @@ public class JobPostingRepositoryTest {
     @Test
     public void shouldFindJobsByRecruiterId() {
         // When
-        List<JobPosting> jobs = jobPostingRepository.findByRecruiterId("recruiter1");
+        List<Job> jobs = jobPostingRepository.findByRecruiterId("recruiter1");
 
         // Then
         assertThat(jobs).hasSize(2);
-        assertThat(jobs).extracting(JobPosting::getCompany).containsOnly("TechCorp");
+        assertThat(jobs).extracting(Job::getCompany).containsOnly("TechCorp");
     }
 
     @Test
     public void shouldFindJobsByTitleContaining() {
         // When
-        List<JobPosting> jobs = jobPostingRepository.findByTitleContainingIgnoreCase("java");
+        List<Job> jobs = jobPostingRepository.findByTitleContainingIgnoreCase("java");
 
         // Then
         assertThat(jobs).hasSize(1);
@@ -84,17 +84,17 @@ public class JobPostingRepositoryTest {
     @Test
     public void shouldFindJobsByLocation() {
         // When
-        List<JobPosting> jobs = jobPostingRepository.findByLocationContainingIgnoreCase("New York");
+        List<Job> jobs = jobPostingRepository.findByLocationContainingIgnoreCase("New York");
 
         // Then
         assertThat(jobs).hasSize(2);
-        assertThat(jobs).extracting(JobPosting::getTitle).containsExactlyInAnyOrder("Java Developer", "Frontend Developer");
+        assertThat(jobs).extracting(Job::getTitle).containsExactlyInAnyOrder("Java Developer", "Frontend Developer");
     }
 
     @Test
     public void shouldFindJobsByRequiredSkill() {
         // When
-        List<JobPosting> jobs = jobPostingRepository.findByRequiredSkillsContaining("Java");
+        List<Job> jobs = jobPostingRepository.findByRequiredSkillsContaining("Java");
 
         // Then
         assertThat(jobs).hasSize(1);
@@ -104,10 +104,10 @@ public class JobPostingRepositoryTest {
     @Test
     public void shouldSearchByKeyword() {
         // When
-        Page<JobPosting> jobs = jobPostingRepository.searchByKeyword("developer", PageRequest.of(0, 10));
+        Page<Job> jobs = jobPostingRepository.searchByKeyword("developer", PageRequest.of(0, 10));
 
         // Then
         assertThat(jobs.getContent()).hasSize(2);
-        assertThat(jobs.getContent()).extracting(JobPosting::getTitle).containsExactlyInAnyOrder("Java Developer", "Frontend Developer");
+        assertThat(jobs.getContent()).extracting(Job::getTitle).containsExactlyInAnyOrder("Java Developer", "Frontend Developer");
     }
 }

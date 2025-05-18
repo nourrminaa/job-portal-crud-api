@@ -1,70 +1,58 @@
-package com.nourmina.jobportal.security;
-import org.springframework.stereotype.Component;
+package com.example.jobportal.security.filters;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nourmina.jobportal.dto.AuthRequest;
-import com.nourmina.jobportal.dto.AuthResponse;
-import com.nourmina.jobportal.model.User;
-import org.springframework.security.authentication.AuthenticationManager;
+import com.example.jobportal.security.JwtUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.*;
+
 import java.io.IOException;
+import java.util.Collections;
 
 @Component
-public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final AuthenticationManager authenticationManager;
-    private final JwtTokenProvider tokenProvider;
-
-    public JwtAuthenticationFilter(AuthenticationManager authenticationManager, JwtTokenProvider tokenProvider) {
-        this.authenticationManager = authenticationManager;
-        this.tokenProvider = tokenProvider;
-        setFilterProcessesUrl("/api/auth/login"); // Custom login URL
-    }
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @Override
-    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
-            throws AuthenticationException {
-        try {
-            AuthRequest authRequest = new ObjectMapper().readValue(request.getInputStream(), AuthRequest.class);
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
 
-            return authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            authRequest.getEmail(),
-                            authRequest.getPassword()
-                    )
-            );
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        final String authorizationHeader = request.getHeader("Authorization");
+
+        String userId = null;
+        String jwt = null;
+        String role = null;
+
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            jwt = authorizationHeader.substring(7);
+            try {
+                userId = jwtUtil.extractUserId(jwt);
+                role = jwtUtil.extractRole(jwt);
+            } catch (Exception e) {
+                logger.error("Error validating JWT token", e);
+            }
         }
-    }
 
-    @Override
-    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response,
-                                            FilterChain chain, Authentication authentication) throws IOException {
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        User user = (User) userDetails;
+        if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            if (jwtUtil.validateToken(jwt)) {
+                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                        userId, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role)));
 
-        String token = tokenProvider.generateToken(authentication);
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+            }
+        }
 
-        AuthResponse authResponse = new AuthResponse(
-                token,
-                user.getRole(),
-                user.getId(),
-                user.getEmail(),
-                user.getFirstName(),
-                user.getLastName()
-        );
-
-        response.setContentType("application/json");
-        response.getWriter().write(new ObjectMapper().writeValueAsString(authResponse));
+        filterChain.doFilter(request, response);
     }
 }

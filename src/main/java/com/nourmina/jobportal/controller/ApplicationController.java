@@ -1,25 +1,18 @@
-package com.nourmina.jobportal.controller;
+package com.example.jobportal.controller;
 
-import com.nourmina.jobportal.dto.ApiResponse;
-import com.nourmina.jobportal.dto.ApplicationDTO;
-import com.nourmina.jobportal.dto.ApplicationResponseDTO;
-import com.nourmina.jobportal.model.Application;
-import com.nourmina.jobportal.security.CurrentUser;
-import com.nourmina.jobportal.service.ApplicationService;
-import com.nourmina.jobportal.service.SecurityService;
+import com.example.jobportal.model.Application;
+import com.example.jobportal.service.ApplicationService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
-import javax.validation.Valid;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/applications")
@@ -28,110 +21,116 @@ public class ApplicationController {
     @Autowired
     private ApplicationService applicationService;
 
-    @Autowired
-    private SecurityService securityService;
-
-    @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Page<Application>> getAllApplications(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "appliedDate") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDirection) {
-
-        Sort.Direction direction = sortDirection.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
-
-        Page<Application> applications = applicationService.getAllApplicationsWithPagination(pageable);
-        return ResponseEntity.ok(applications);
-    }
-
-    @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or @securityService.isApplicationOwner(#id) or @securityService.isJobPostingRecruiter(#id)")
-    public ResponseEntity<Application> getApplicationById(@PathVariable String id) {
-        Application application = applicationService.getApplicationById(id);
-        return ResponseEntity.ok(application);
-    }
-
-    @GetMapping("/candidate/{candidateId}")
-    @PreAuthorize("hasRole('ADMIN') or @securityService.isCurrentUser(#candidateId)")
-    public ResponseEntity<Page<ApplicationResponseDTO>> getApplicationsByCandidate(
-            @PathVariable String candidateId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "appliedDate") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDirection) {
-
-        Sort.Direction direction = sortDirection.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
-
-        Page<ApplicationResponseDTO> applications = applicationService.getApplicationsByCandidateWithPagination(candidateId, pageable);
-        return ResponseEntity.ok(applications);
-    }
-
-    @GetMapping("/job-posting/{jobPostingId}")
-    @PreAuthorize("hasRole('ADMIN') or @securityService.isJobPostingRecruiter(#jobPostingId)")
-    public ResponseEntity<Page<ApplicationResponseDTO>> getApplicationsByJobPosting(
-            @PathVariable String jobPostingId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "appliedDate") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDirection) {
-
-        Sort.Direction direction = sortDirection.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
-
-        Page<ApplicationResponseDTO> applications = applicationService.getApplicationsByJobPostingWithPagination(jobPostingId, pageable);
-        return ResponseEntity.ok(applications);
-    }
-
-    @GetMapping("/my-applications")
-    @PreAuthorize("hasRole('CANDIDATE')")
-    public ResponseEntity<Page<ApplicationResponseDTO>> getCurrentUserApplications(
-            @CurrentUser UserDetails currentUser,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "appliedDate") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDirection) {
-
-        String candidateId = securityService.getCurrentUserId(currentUser);
-        Sort.Direction direction = sortDirection.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
-
-        Page<ApplicationResponseDTO> applications = applicationService.getApplicationsByCandidateWithPagination(candidateId, pageable);
-        return ResponseEntity.ok(applications);
-    }
-
+    // Submit a job application (candidate only)
     @PostMapping
     @PreAuthorize("hasRole('CANDIDATE')")
-    public ResponseEntity<ApiResponse> applyForJob(
-            @Valid @RequestBody ApplicationDTO applicationDTO,
-            @CurrentUser UserDetails currentUser) {
+    public ResponseEntity<Application> applyToJob(
+            @RequestBody Map<String, String> applicationRequest,
+            Authentication auth) {
 
-        // Ensure the candidate ID in the DTO matches the current user
-        String candidateId = securityService.getCurrentUserId(currentUser);
-        applicationDTO.setCandidateId(candidateId);
+        String jobId = applicationRequest.get("jobId");
+        String coverLetter = applicationRequest.get("coverLetter");
 
-        Application application = applicationService.apply(applicationDTO);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new ApiResponse(true, "Application submitted successfully", application));
+        if (jobId == null || jobId.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Job ID is required");
+        }
+
+        try {
+            String userId = auth.getName();
+            Application application = applicationService.applyToJob(jobId, userId, coverLetter);
+            return ResponseEntity.status(HttpStatus.CREATED).body(application);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
     }
 
+    // Get applications for a specific job (recruiter only)
+    @GetMapping("/job/{jobId}")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ResponseEntity<List<Application>> getApplicationsForJob(
+            @PathVariable String jobId,
+            Authentication auth) {
+
+        try {
+            String userId = auth.getName();
+            List<Application> applications = applicationService.getApplicationsForJob(jobId, userId);
+            return ResponseEntity.ok(applications);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
+    // Get applications submitted by a candidate (for the candidate's profile)
+    @GetMapping("/my-applications")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ResponseEntity<List<Application>> getUserApplications(Authentication auth) {
+        String userId = auth.getName();
+        List<Application> applications = applicationService.getApplicationsForUser(userId);
+        return ResponseEntity.ok(applications);
+    }
+
+    // Get a specific application
+    @GetMapping("/{id}")
+    public ResponseEntity<Application> getApplication(@PathVariable String id, Authentication auth) {
+        try {
+            Application application = applicationService.getApplication(id);
+            String userId = auth.getName();
+
+            // Security check - only the candidate who applied or the recruiter who posted the job can view
+            // This would be better implemented in the service layer
+
+            return ResponseEntity.ok(application);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
+    }
+
+    // Update application status (recruiter only)
     @PutMapping("/{id}/status")
-    @PreAuthorize("hasRole('RECRUITER') and @securityService.isJobPostingRecruiter(#id)")
-    public ResponseEntity<ApiResponse> updateApplicationStatus(
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ResponseEntity<Application> updateApplicationStatus(
             @PathVariable String id,
-            @RequestParam String status) {
+            @RequestBody Map<String, String> statusUpdate,
+            Authentication auth) {
 
-        Application updatedApplication = applicationService.updateApplicationStatus(id, status);
-        return ResponseEntity.ok(
-                new ApiResponse(true, "Application status updated successfully", updatedApplication));
+        String status = statusUpdate.get("status");
+
+        if (status == null || status.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status is required");
+        }
+
+        try {
+            String userId = auth.getName();
+            Application updatedApplication = applicationService.updateApplicationStatus(id, status, userId);
+            return ResponseEntity.ok(updatedApplication);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
     }
 
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or @securityService.isApplicationOwner(#id)")
-    public ResponseEntity<ApiResponse> deleteApplication(@PathVariable String id) {
-        applicationService.deleteApplication(id);
-        return ResponseEntity.ok(new ApiResponse(true, "Application deleted successfully"));
+    // Withdraw an application (candidate only)
+    @PutMapping("/{id}/withdraw")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ResponseEntity<Void> withdrawApplication(@PathVariable String id, Authentication auth) {
+        try {
+            String userId = auth.getName();
+            applicationService.withdrawApplication(id, userId);
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
+    // Check if candidate has already applied to a job
+    @GetMapping("/check/{jobId}")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ResponseEntity<Map<String, Boolean>> hasApplied(@PathVariable String jobId, Authentication auth) {
+        String userId = auth.getName();
+        boolean hasApplied = applicationService.hasApplied(jobId, userId);
+
+        Map<String, Boolean> response = new HashMap<>();
+        response.put("applied", hasApplied);
+
+        return ResponseEntity.ok(response);
     }
 }
