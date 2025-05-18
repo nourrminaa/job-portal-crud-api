@@ -7,6 +7,11 @@ import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import java.util.Collection;
+import java.util.Collections;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -17,7 +22,7 @@ import java.util.List;
 public class User implements UserDetails {
 
     @Id  // Marks 'id' as the unique identifier for MongoDB document
-    private String id;        // MongoDB will generate this automatically if left null
+    private String id;
 
     private String fname;
     private String lname;
@@ -27,19 +32,19 @@ public class User implements UserDetails {
     private String email;     // The user's email address (should be unique)
 
     private String password;  // The user's password (stored hashed)
-    ArrayList<String> roles; // List of roles (e.g., ROLE_CANDIDATE, ROLE_RECRUITER)
+    private String role; // Role (e.g., CANDIDATE, RECRUITER)
 
     // Constructors
     public User() {
-        this(null, null, null, null, new ArrayList<>());
+        this(null, null, null, null, null);
     }
 
-    public User(String fname, String lname, String email, String password, ArrayList<String> roles) {
+    public User(String fname, String lname, String email, String password, String role) {
         this.fname = fname;
         this.lname = lname;
         this.email = email;
         this.password = password;
-        this.roles = roles != null ? roles : new ArrayList<>();
+        this.role = role;
     }
 
     // Getter and setter methods
@@ -59,21 +64,12 @@ public class User implements UserDetails {
     @Override
     public String getPassword() { return password; }
 
-    public ArrayList<String> getRoles() { return roles; }
-    public void setRoles(ArrayList<String> roles) { this.roles = roles; }
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
 
     @Override
     public String getUsername() {
         return email; // Using email as username for authentication
-    }
-
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        List<GrantedAuthority> authorities = new ArrayList<>();
-        for (String role : roles) {
-            authorities.add(new SimpleGrantedAuthority(role));
-        }
-        return authorities;
     }
 
     @Override
@@ -94,5 +90,20 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() {
         return true;
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        // Simple implementation: no roles/authorities for now
+        return Collections.emptyList(); // or implement real roles later
+    }
+
+    // Passowords were excluded on purpose !!!
+    @Override
+    public String toString() {
+        return "ID: " + id + "\n" +
+                "Name: " + fname + " " + lname + "\n" +
+                "Email: " + email + "\n" +
+                "Role: " + role;
     }
 }

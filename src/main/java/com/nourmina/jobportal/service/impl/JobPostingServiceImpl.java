@@ -1,65 +1,110 @@
-package com.nourmina.jobportal.service.impl;
+package com.nourmina.jobportal.service;
 
+import com.nourmina.jobportal.cache.DataCache;
+import com.nourmina.jobportal.exception.BadRequestException;
 import com.nourmina.jobportal.model.JobPosting;
-import com.nourmina.jobportal.service.JobPostingService;
+import com.nourmina.jobportal.util.IdGenerator;
+import com.nourmina.jobportal.validation.JobPostingValidator;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class JobPostingServiceImpl implements JobPostingService {
 
-    private final ArrayList<JobPosting> jobPostings = new ArrayList<>();
+    private final DataCache dataCache;
+    private IdGenerator idGenerator;
 
-    @Override
-    public ArrayList<JobPosting> listJobs() {
-        return new ArrayList<>(jobPostings);
+    public JobPostingServiceImpl(DataCache dataCache) {
+        this.dataCache = dataCache;
     }
 
     @Override
-    public ArrayList<JobPosting> searchJobs(String keyword) {
-        ArrayList<JobPosting> result = new ArrayList<>();
-        for (JobPosting job : jobPostings) {
-            if (job.getTitle().toLowerCase().contains(keyword.toLowerCase())) {
-                result.add(job);
+    public JobPosting createJob(JobPosting job) {
+        JobPostingValidator.validate(job);
+
+        job.setId(idGenerator.generateId("JOB"));
+
+        ArrayList<JobPosting> currentJobs = dataCache.getJobs();
+        currentJobs.add(job);
+        dataCache.setJobs(currentJobs);
+        return job;
+    }
+
+    @Override
+    public ArrayList<JobPosting> getAllJobs() {
+        return new ArrayList<>(dataCache.getJobs());
+    }
+
+    @Override
+    public ArrayList<JobPosting> getJobsByRecruiterId(String recruiterId) {
+        if (recruiterId == null || recruiterId.isBlank()) {
+            throw new BadRequestException("Recruiter ID is required.");
+        }
+        return dataCache.getJobs().stream()
+                .filter(job -> recruiterId.equals(job.getRecruiterId()))
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    @Override
+    public JobPosting updateJob(JobPosting job) {
+        JobPostingValidator.validate(job);
+
+        if (job.getId() == null || job.getId().isBlank()) {
+            throw new BadRequestException("Job ID is required for update.");
+        }
+
+        ArrayList<JobPosting> currentJobs = dataCache.getJobs();
+        Optional<JobPosting> existingOpt = currentJobs.stream()
+                .filter(j -> job.getId().equals(j.getId()))
+                .findFirst();
+
+        if (existingOpt.isEmpty()) {
+            throw new BadRequestException("Job with ID " + job.getId() + " not found.");
+        }
+
+        JobPosting existing = existingOpt.get();
+        int index = currentJobs.indexOf(existing);
+
+        existing.setTitle(job.getTitle());
+        existing.setCompany(job.getCompany());
+        existing.setDescription(job.getDescription());
+        existing.setRequiredSkills(job.getRequiredSkills());
+        existing.setRecruiterId(job.getRecruiterId());
+        existing.setLocation(job.getLocation());
+        existing.setSalary(job.getSalary());
+
+        currentJobs.set(index, existing);
+        dataCache.setJobs(currentJobs);
+
+        return existing;
+    }
+
+    @Override
+    public void deleteJob(String jobId) {
+        if (jobId == null || jobId.isBlank()) {
+            throw new BadRequestException("Job ID cannot be empty.");
+        }
+
+        ArrayList<JobPosting> currentJobs = dataCache.getJobs();
+        boolean removed = currentJobs.removeIf(job -> jobId.equals(job.getId()));
+
+        if (!removed) {
+            throw new BadRequestException("Job with ID " + jobId + " not found.");
+        }
+
+        dataCache.setJobs(currentJobs);
+    }
+
+    @Override
+    public Optional<JobPosting> findById(String jobId) {
+        for (JobPosting job : getAllJobs()) {
+            if (job.getId().equals(jobId)) {
+                return Optional.of(job);
             }
         }
-        return result;
-    }
-
-    @Override
-    public void loadJobPostings(ArrayList<JobPosting> jobs) {
-        jobPostings.clear();
-        jobPostings.addAll(jobs);
-    }
-
-    @Override
-    public ArrayList<JobPosting> getAllJobPostings() {
-        return jobPostings;
-    }
-
-    // Simple beginner-friendly sorting method: sort by salary ascending
-    public ArrayList<JobPosting> sortJobsBySalary() {
-        ArrayList<JobPosting> sorted = new ArrayList<>(jobPostings);
-        sorted.sort(Comparator.comparingDouble(JobPosting::getSalary));
-        return sorted;
-    }
-
-    // Simple beginner-friendly pagination method for job postings
-    // pageNumber starts at 1
-    public ArrayList<JobPosting> paginateJobs(int pageNumber, int pageSize) {
-        ArrayList<JobPosting> paginated = new ArrayList<>();
-        int start = (pageNumber - 1) * pageSize;
-        int end = Math.min(start + pageSize, jobPostings.size());
-
-        if (start >= jobPostings.size() || start < 0) {
-            return paginated; // empty list for invalid page
-        }
-
-        for (int i = start; i < end; i++) {
-            paginated.add(jobPostings.get(i));
-        }
-        return paginated;
+        return Optional.empty();
     }
 }

@@ -1,38 +1,36 @@
 package com.nourmina.jobportal.controller;
 
+import com.nourmina.jobportal.cache.DataCache;
 import com.nourmina.jobportal.model.Application;
-import com.nourmina.jobportal.service.ApplicationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/applications")
+@RequestMapping("/api/applications")
+@CrossOrigin(origins = "*")
 public class ApplicationController {
 
-    private final ApplicationService applicationService;
+    private final DataCache dataCache;
 
-    public ApplicationController(ApplicationService applicationService) {
-        this.applicationService = applicationService;
-    }
-
-    @GetMapping
-    public ResponseEntity<ArrayList<Application>> getAllApplications() {
-        return ResponseEntity.ok(applicationService.getAllApplications());
+    public ApplicationController(DataCache dataCache) {
+        this.dataCache = dataCache;
     }
 
     @GetMapping("/candidate/{candidateId}")
     public ResponseEntity<ArrayList<Application>> getApplicationsByCandidate(@PathVariable String candidateId) {
-        return ResponseEntity.ok(applicationService.findApplicationsByCandidateId(candidateId));
+        ArrayList<Application> applications = dataCache.getApplications().stream()
+                .filter(app -> app.getCandidateId().equals(candidateId))
+                .collect(Collectors.toCollection(ArrayList::new));
+        return ResponseEntity.ok(applications);
     }
 
-    @PutMapping("/{applicationId}/status")
-    public ResponseEntity<Void> updateApplicationStatus(
-            @PathVariable String applicationId,
-            @RequestParam String status
-    ) {
-        applicationService.updateApplicationStatus(applicationId, status);
-        return ResponseEntity.noContent().build();
+    @PostMapping
+    public ResponseEntity<Application> createApplication(@RequestBody Application application) {
+        ArrayList<Application> applications = dataCache.getApplications();
+        applications.add(application);
+        dataCache.setApplications(applications);
+        return ResponseEntity.ok(application);
     }
 }

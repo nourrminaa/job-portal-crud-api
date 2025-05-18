@@ -1,11 +1,10 @@
-package com.nourmina.jobportal.service.impl;
+package com.nourmina.jobportal.service;
 
-import com.nourmina.jobportal.exception.ResourceNotFoundException;
+import com.nourmina.jobportal.cache.DataCache;
 import com.nourmina.jobportal.exception.BadRequestException;
 import com.nourmina.jobportal.model.JobPosting;
 import com.nourmina.jobportal.model.Recruiter;
-import com.nourmina.jobportal.service.RecruiterService;
-import com.nourmina.jobportal.validation.JobPostingValidator;
+import com.nourmina.jobportal.model.User;
 import com.nourmina.jobportal.validation.RecruiterValidator;
 import org.springframework.stereotype.Service;
 
@@ -15,87 +14,136 @@ import java.util.Optional;
 @Service
 public class RecruiterServiceImpl implements RecruiterService {
 
-    private final ArrayList<Recruiter> recruiters = new ArrayList<>();
-    private final ArrayList<JobPosting> jobPostings;
+    private final DataCache dataCache;
+    private final JobPostingService jobPostingService;
 
-    public RecruiterServiceImpl(ArrayList<JobPosting> jobPostings) {
-        this.jobPostings = jobPostings;
-    }
-
-    @Override
-    public Recruiter registerRecruiter(Recruiter recruiter) {
-        RecruiterValidator.validate(recruiter);
-        // Optionally check for duplicate email here
-
-        recruiters.add(recruiter);
-        return recruiter;
+    public RecruiterServiceImpl(DataCache dataCache, JobPostingService jobPostingService) {
+        this.dataCache = dataCache;
+        this.jobPostingService = jobPostingService;
     }
 
     @Override
     public Optional<Recruiter> findById(String id) {
-        return recruiters.stream()
-                .filter(r -> r.getId().equals(id))
-                .findFirst();
-    }
+        if (id == null || id.isBlank()) {
+            return Optional.empty();
+        }
 
-    @Override
-    public JobPosting createJob(String recruiterId, JobPosting jobPosting) {
-        Recruiter recruiter = findById(recruiterId)
-                .orElseThrow(() -> new ResourceNotFoundException("Recruiter not found"));
-
-        JobPostingValidator.validate(jobPosting);
-
-        jobPosting.setRecruiterId(recruiter.getId());
-        jobPostings.add(jobPosting);
-        return jobPosting;
-    }
-
-    @Override
-    public JobPosting updateJob(String jobId, JobPosting updatedJob) {
-        JobPostingValidator.validate(updatedJob);
-
-        for (JobPosting job : jobPostings) {
-            if (job.getId().equals(jobId)) {
-                job.setTitle(updatedJob.getTitle());
-                job.setDescription(updatedJob.getDescription());
-                job.setLocation(updatedJob.getLocation());
-                job.setSalary(updatedJob.getSalary());
-                return job;
+        ArrayList<User> users = dataCache.getUsers();
+        for (User user : users) {
+            // Check if user is Recruiter and matches the id
+            if (id.equals(user.getId()) && user instanceof Recruiter) {
+                return Optional.of((Recruiter) user);
             }
         }
-        throw new ResourceNotFoundException("Job not found");
+        return Optional.empty();
     }
 
     @Override
-    public void deleteJob(String jobId) {
-        boolean removed = jobPostings.removeIf(job -> job.getId().equals(jobId));
-        if (!removed) {
-            throw new ResourceNotFoundException("Job not found");
+    public Recruiter updateRecruiter(Recruiter recruiter) {
+        RecruiterValidator.validate(recruiter);
+
+        Optional<Recruiter> existingOpt = findById(recruiter.getId());
+        if (existingOpt.isEmpty()) {
+            throw new BadRequestException("Recruiter with id " + recruiter.getId() + " not found.");
         }
+
+        ArrayList<User> currentUsers = dataCache.getUsers();
+        for (int i = 0; i < currentUsers.size(); i++) {
+            User user = currentUsers.get(i);
+            if (recruiter.getId().equals(user.getId()) && user instanceof Recruiter) {
+                Recruiter existing = (Recruiter) user;
+                existing.setFirstName(recruiter.getFirstName());
+                existing.setLastName(recruiter.getLastName());
+                existing.setEmail(recruiter.getEmail());
+                existing.setPassword(recruiter.getPassword()); // Consider hashing password here
+                existing.setCompany(recruiter.getCompany());
+                existing.setRole(recruiter.getRole());
+
+                currentUsers.set(i, existing);
+                dataCache.setUsers(currentUsers);
+                return existing;
+            }
+        }
+
+        return recruiter;
     }
 
+    @Override
+    public void deleteRecruiter(String id) {
+        if (id == null || id.isBlank()) {
+            throw new BadRequestException("Recruiter id cannot be empty");
+        }
+
+        ArrayList<User> currentUsers = dataCache.getUsers();
+        boolean removed = false;
+
+        for (int i = 0; i < currentUsers.size(); i++) {
+            User user = currentUsers.get(i);
+            if (id.equals(user.getId()) && user instanceof Recruiter) {
+                currentUsers.remove(i);
+                removed = true;
+                break;
+            }
+        }
+
+        if (!removed) {
+            throw new BadRequestException("Recruiter with id " + id + " not found.");
+        }
+
+        dataCache.setUsers(currentUsers);
+    }
+
+    @Override
     public ArrayList<Recruiter> getAllRecruiters() {
+        ArrayList<Recruiter> recruiters = new ArrayList<>();
+        for (User user : dataCache.getUsers()) {
+            if (user instanceof Recruiter) {
+                recruiters.add((Recruiter) user);
+            }
+        }
         return recruiters;
     }
 
-    public ArrayList<Recruiter> filterRecruitersByKeyword(String keyword) {
-        ArrayList<Recruiter> filtered = new ArrayList<>();
-        String lowerKeyword = keyword.toLowerCase();
+    @Override
+    public ArrayList<JobPosting> getAllRecruiterJobs(String recruiterId) {
+        if (recruiterId == null || recruiterId.isBlank()) {
+            throw new BadRequestException("Recruiter ID required.");
+        }
 
-        for (Recruiter recruiter : recruiters) {
-            boolean matchesCompany = recruiter.getCompany() != null && recruiter.getCompany().toLowerCase().contains(lowerKeyword);
-            boolean matchesName = false;
-
-            if (recruiter.getFirstName() != null && recruiter.getLastName() != null) {
-                String fullName = (recruiter.getFirstName() + " " + recruiter.getLastName()).toLowerCase();
-                matchesName = fullName.contains(lowerKeyword);
-            }
-
-            if (matchesCompany || matchesName) {
-                filtered.add(recruiter);
+        ArrayList<JobPosting> jobPostings = dataCache.getJobs();
+        ArrayList<JobPosting> result = new ArrayList<>();
+        for (JobPosting job : jobPostings) {
+            if (recruiterId.equals(job.getRecruiterId())) {
+                result.add(job);
             }
         }
-        return filtered;
+        return result;
     }
 
+    @Override
+    public JobPosting postJob(JobPosting job, String recruiterId) {
+        if (recruiterId == null || recruiterId.isBlank()) {
+            throw new BadRequestException("Recruiter ID required for posting a job.");
+        }
+
+        job.setRecruiterId(recruiterId);
+        return jobPostingService.createJob(job);
+    }
+
+    @Override
+    public Recruiter save(Recruiter recruiter) {
+        RecruiterValidator.validate(recruiter);
+
+        ArrayList<User> currentUsers = dataCache.getUsers();
+        for (User r : currentUsers) {
+            if (r.getEmail() != null && recruiter.getEmail() != null &&
+                    r.getEmail().equalsIgnoreCase(recruiter.getEmail())) {
+                throw new BadRequestException("Recruiter with this email already exists.");
+            }
+        }
+
+        currentUsers.add(recruiter);
+        dataCache.setUsers(currentUsers);
+        return recruiter;
+    }
 }

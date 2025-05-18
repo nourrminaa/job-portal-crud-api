@@ -1,42 +1,40 @@
 package com.nourmina.jobportal.controller;
 
+import com.nourmina.jobportal.cache.DataCache;
 import com.nourmina.jobportal.model.JobPosting;
-import com.nourmina.jobportal.service.JobPostingService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.ArrayList;
 
 @RestController
-@RequestMapping("/jobs")
+@RequestMapping("/api/jobs")
+@CrossOrigin(origins = "*")
 public class JobController {
 
-    private final JobPostingService jobPostingService;
+    private final DataCache dataCache;
 
-    public JobController(JobPostingService jobPostingService) {
-        this.jobPostingService = jobPostingService;
+    public JobController(DataCache dataCache) {
+        this.dataCache = dataCache;
     }
 
     @GetMapping
     public ResponseEntity<ArrayList<JobPosting>> getAllJobs() {
-        return ResponseEntity.ok(jobPostingService.listJobs());
+        return ResponseEntity.ok(dataCache.getJobs());
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<ArrayList<JobPosting>> searchJobs(@RequestParam String keyword) {
-        return ResponseEntity.ok(jobPostingService.searchJobs(keyword));
+    @PostMapping
+    public ResponseEntity<JobPosting> createJob(@RequestBody JobPosting job) {
+        ArrayList<JobPosting> jobs = dataCache.getJobs();
+        jobs.add(job);
+        dataCache.setJobs(jobs);
+        return ResponseEntity.ok(job);
     }
 
-    @GetMapping("/sorted")
-    public ResponseEntity<ArrayList<JobPosting>> getJobsSortedBySalary() {
-        return ResponseEntity.ok(jobPostingService.sortJobsBySalary());
-    }
-
-    @GetMapping("/page")
-    public ResponseEntity<ArrayList<JobPosting>> getJobsPaginated(
-            @RequestParam int page,
-            @RequestParam int size
-    ) {
-        return ResponseEntity.ok(jobPostingService.paginateJobs(page, size));
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteJob(@PathVariable String id) {
+        ArrayList<JobPosting> jobs = dataCache.getJobs();
+        jobs.removeIf(job -> job.getId().equals(id));
+        dataCache.setJobs(jobs);
+        return ResponseEntity.ok().build();
     }
 }

@@ -18,8 +18,7 @@ public class Recruiter extends User {
     }
 
     public Recruiter(String fname, String lname, String email, String password, String company, String contactInfo) {
-        super(fname, lname, email, password, new ArrayList<>());
-        this.roles.add("ROLE_RECRUITER");
+        super(fname, lname, email, password, "RECRUITER");
         this.company = company;
         this.contactInfo = contactInfo;
     }
@@ -29,4 +28,14 @@ public class Recruiter extends User {
 
     public String getContactInfo() { return contactInfo; }
     public void setContactInfo(String contactInfo) { this.contactInfo = contactInfo; }
+
+    @Override
+    public String toString() {
+        return "Recruiter{" +
+                super.toString() + ", " +
+                "company='" + company + '\'' +
+                ", contactInfo='" + contactInfo + '\'' +
+                '}';
+    }
+
 }

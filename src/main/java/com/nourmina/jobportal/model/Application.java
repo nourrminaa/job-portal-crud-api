@@ -52,4 +52,5 @@ public class Application {
     }
 
     public LocalDate getApplicationDate() { return applicationDate; }
+    public void setApplicationDate(LocalDate applicationDate) { this.applicationDate = applicationDate; }
 }

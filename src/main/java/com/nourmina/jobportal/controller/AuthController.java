@@ -1,49 +1,53 @@
 package com.nourmina.jobportal.controller;
 
-import com.nourmina.jobportal.dto.AuthResponse;
-import com.nourmina.jobportal.dto.LoginRequest;
-import com.nourmina.jobportal.dto.RegisterRequest;
+import com.nourmina.jobportal.cache.DataCache;
 import com.nourmina.jobportal.model.User;
-import com.nourmina.jobportal.service.AuthService;
-import jakarta.validation.Valid;
+import com.nourmina.jobportal.security.JwtService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.Map;
+import java.util.Optional;
 import java.util.ArrayList;
 
-import java.util.Collections;
-
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
+@CrossOrigin(origins = "*")
 public class AuthController {
 
-    private final AuthService authService;
+    private final DataCache dataCache;
+    private final JwtService jwtService;
 
-    public AuthController(AuthService authService) {
-        this.authService = authService;
-    }
-
-    @PostMapping("/register")
-    public ResponseEntity<User> register(@RequestBody RegisterRequest request) {
-        // Convert roles (which might come as List<String>) to ArrayList<String>
-        ArrayList<String> roles = new ArrayList<>();
-        roles.add(request.getRole()); // example: single role, adjust if multiple
-
-        User user = authService.register(
-                request.getFname(),
-                request.getLname(),
-                request.getEmail(),
-                request.getPassword(),
-                roles
-        );
-
-        return ResponseEntity.ok(user);
+    public AuthController(DataCache dataCache, JwtService jwtService) {
+        this.dataCache = dataCache;
+        this.jwtService = jwtService;
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> loginUser(@Valid @RequestBody LoginRequest request) {
-        User user = authService.login(request.getEmail(), request.getPassword());
-        // For demo, token is just dummy. Replace with JWT token generation if you want.
-        String token = "dummy-jwt-token-for-" + user.getEmail();
-        return ResponseEntity.ok(new AuthResponse(token));
+    public ResponseEntity<?> login(@RequestBody Map<String, String> loginRequest) {
+        Optional<User> user = dataCache.getUsers().stream()
+                .filter(u -> u.getEmail().equals(loginRequest.get("email")))
+                .findFirst();
+
+        if (user.isPresent() && user.get().getPassword().equals(loginRequest.get("password"))) {
+            String token = jwtService.generateToken(user.get());
+            return ResponseEntity.ok(Map.of("token", token, "user", user.get()));
+        }
+
+        return ResponseEntity.badRequest().body("Invalid credentials");
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody User newUser) {
+        if (dataCache.getUsers().stream()
+                .anyMatch(u -> u.getEmail().equals(newUser.getEmail()))) {
+            return ResponseEntity.badRequest().body("Email already exists");
+        }
+
+        ArrayList<User> users = dataCache.getUsers();
+        users.add(newUser);
+        dataCache.setUsers(users);
+
+        String token = jwtService.generateToken(newUser);
+        return ResponseEntity.ok(Map.of("token", token, "user", newUser));
     }
 }

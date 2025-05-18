@@ -1,38 +1,75 @@
-package com.nourmina.jobportal.service.impl;
+package com.nourmina.jobportal.service;
 
-import com.nourmina.jobportal.model.Application;
-import com.nourmina.jobportal.service.ApplicationService;
 import com.nourmina.jobportal.cache.DataCache;
+import com.nourmina.jobportal.exception.BadRequestException;
+import com.nourmina.jobportal.model.Application;
+import com.nourmina.jobportal.util.IdGenerator;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Optional;
 
 @Service
 public class ApplicationServiceImpl implements ApplicationService {
 
     private final DataCache dataCache;
+    private final IdGenerator idGenerator;
 
     public ApplicationServiceImpl(DataCache dataCache) {
         this.dataCache = dataCache;
+        this.idGenerator = new IdGenerator();
     }
 
     @Override
-    public void updateApplicationStatus(String applicationId, String newStatus) {
-        for (Application application : dataCache.getApplications()) {
-            if (application.getId() != null && application.getId().equals(applicationId)) {
-                application.setStatus(newStatus);
-                return;
-            }
+    // Create Application
+    public Application save(Application application) {
+        if (application == null) {
+            throw new BadRequestException("Application cannot be null");
         }
-        System.out.println("Application not found.");
+
+        if (application.getCandidateId() == null || application.getCandidateId().isBlank()) {
+            throw new BadRequestException("Candidate ID is required");
+        }
+
+        if (application.getJobPostingId() == null || application.getJobPostingId().isBlank()) {
+            throw new BadRequestException("Job ID is required");
+        }
+
+        // Generate a new ID for the application
+        application.setId(idGenerator.generateId("APP"));
+
+        ArrayList<Application> currentApplications = dataCache.getApplications();
+        currentApplications.add(application);
+        dataCache.setApplications(currentApplications);
+        return application;
+    }
+
+    // Delete
+    @Override
+    public void withdrawApplication(String applicationId) {
+        if (applicationId == null || applicationId.isBlank()) {
+            throw new BadRequestException("Application ID is required");
+        }
+
+        ArrayList<Application> currentApplications = dataCache.getApplications();
+        boolean removed = currentApplications.removeIf(app -> applicationId.equals(app.getId()));
+
+        if (!removed) {
+            throw new BadRequestException("Application not found.");
+        }
+
+        dataCache.setApplications(currentApplications);
     }
 
     @Override
-    public ArrayList<Application> findApplicationsByCandidateId(String candidateId) {
+    public ArrayList<Application> getApplicationsByJobId(String jobId) {
+        if (jobId == null || jobId.isBlank()) {
+            throw new BadRequestException("Job ID is required");
+        }
+
         ArrayList<Application> result = new ArrayList<>();
         for (Application app : dataCache.getApplications()) {
-            // Null-safe check to avoid NullPointerException
-            if (app.getCandidateId() != null && app.getCandidateId().equals(candidateId)) {
+            if (jobId.equals(app.getJobPostingId())) {
                 result.add(app);
             }
         }
@@ -40,13 +77,28 @@ public class ApplicationServiceImpl implements ApplicationService {
     }
 
     @Override
-    public void loadApplications(ArrayList<Application> apps) {
-        dataCache.getApplications().clear();
-        dataCache.getApplications().addAll(apps);
+    public ArrayList<Application> getApplicationsByCandidateId(String candidateId) {
+        if (candidateId == null || candidateId.isBlank()) {
+            throw new BadRequestException("Candidate ID is required");
+        }
+
+        ArrayList<Application> result = new ArrayList<>();
+        for (Application app : dataCache.getApplications()) {
+            if (candidateId.equals(app.getCandidateId())) {
+                result.add(app);
+            }
+        }
+        return result;
     }
 
     @Override
-    public ArrayList<Application> getAllApplications() {
-        return new ArrayList<>(dataCache.getApplications());
+    public Optional<Application> findById(String applicationId) {
+        if (applicationId == null || applicationId.isBlank()) {
+            return Optional.empty();
+        }
+
+        return dataCache.getApplications().stream()
+                .filter(app -> applicationId.equals(app.getId()))
+                .findFirst();
     }
 }

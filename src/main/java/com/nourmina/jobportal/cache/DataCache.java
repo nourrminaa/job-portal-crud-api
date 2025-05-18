@@ -3,38 +3,44 @@ package com.nourmina.jobportal.cache;
 import com.nourmina.jobportal.model.*;
 import org.springframework.stereotype.Component;
 import java.util.ArrayList;
-import java.util.List;
 
 @Component
 public class DataCache {
 
-    private final List<User> users = new ArrayList<>();
-    private final List<JobPosting> jobs = new ArrayList<>();
-    private final List<Application> applications = new ArrayList<>();
+    private final ArrayList<User> users = new ArrayList<>();
+    private final ArrayList<JobPosting> jobs = new ArrayList<>();
+    private final ArrayList<Application> applications = new ArrayList<>();
 
     private boolean isDirty = false;
 
-    public List<User> getUsers() {
+    public ArrayList<User> getUsers() {
         return users;
     }
 
-    public List<JobPosting> getJobs() {
+    public ArrayList<JobPosting> getJobs() {
         return jobs;
     }
 
-    public List<Application> getApplications() {
+    public ArrayList<Application> getApplications() {
         return applications;
     }
 
-    public void markDirty() {
-        this.isDirty = true;
+    public void setUsers(ArrayList<User> updatedUsers) {
+        users.clear();
+        users.addAll(updatedUsers);
+        isDirty = true;
     }
 
-    public boolean isDirty() {
-        return isDirty;
+    public void setJobs(ArrayList<JobPosting> updatedJobs) {
+        jobs.clear();
+        jobs.addAll(updatedJobs);
+        isDirty = true;
     }
 
-    public void clearDirty() {
-        this.isDirty = false;
+    public void setApplications(ArrayList<Application> updatedApplications) {
+        applications.clear();
+        applications.addAll(updatedApplications);
+        isDirty = true;
     }
+
 }

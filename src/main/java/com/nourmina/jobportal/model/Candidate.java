@@ -15,11 +15,11 @@ public class Candidate extends User {
     }
 
     public Candidate(String fname, String lname, String email, String password, String resume, ArrayList<String> skills) {
-        super(fname, lname, email, password, new ArrayList<>());
-        this.roles.add("ROLE_CANDIDATE");
+        super(fname, lname, email, password, "CANDIDATE");
         this.resume = resume;
-        this.skills = skills;
+        this.skills = skills != null ? skills : new ArrayList<>();
     }
+
 
     // Getter and setter methods
     public String getResume() { return resume; }
@@ -27,4 +27,14 @@ public class Candidate extends User {
 
     public ArrayList<String> getSkills() { return skills; }
     public void setSkills(ArrayList<String> skills) { this.skills = skills; }
+
+    @Override
+    public String toString() {
+        return "Candidate{" +
+                super.toString() + ", " +
+                "resume='" + resume + '\'' +
+                ", skills=" + skills +
+                '}';
+    }
+
 }
