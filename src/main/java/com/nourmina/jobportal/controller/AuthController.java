@@ -1,59 +1,46 @@
 package com.nourmina.jobportal.controller;
 
-import com.nourmina.jobportal.cache.DataCache;
+import com.nourmina.jobportal.dto.ApiResponse;
+import com.nourmina.jobportal.dto.AuthRequest;
+import com.nourmina.jobportal.dto.AuthResponse;
+import com.nourmina.jobportal.dto.CandidateDTO;
+import com.nourmina.jobportal.dto.RecruiterDTO;
 import com.nourmina.jobportal.model.User;
-import com.nourmina.jobportal.security.JwtService;
-import com.nourmina.jobportal.service.MongoDBService;
+import com.nourmina.jobportal.service.AuthService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import java.util.Map;
-import java.util.Optional;
-import java.util.ArrayList;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "*")
 public class AuthController {
 
-    private final DataCache dataCache;
-    private final JwtService jwtService;
-    private final MongoDBService mongoDBService;
-
-    public AuthController(DataCache dataCache, JwtService jwtService, MongoDBService mongoDBService) {
-        this.dataCache = dataCache;
-        this.jwtService = jwtService;
-        this.mongoDBService = mongoDBService;
-    }
+    @Autowired
+    private AuthService authService;
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> loginRequest) {
-        Optional<User> user = dataCache.getUsers().stream()
-                .filter(u -> u.getEmail().equals(loginRequest.get("email")))
-                .findFirst();
-
-        if (user.isPresent() && user.get().getPassword().equals(loginRequest.get("password"))) {
-            String token = jwtService.generateToken(user.get());
-            return ResponseEntity.ok(Map.of("token", token, "user", user.get()));
-        }
-
-        return ResponseEntity.badRequest().body("Invalid credentials");
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest loginRequest) {
+        AuthResponse authResponse = authService.login(loginRequest);
+        return ResponseEntity.ok(authResponse);
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody User newUser) {
-        if (dataCache.getUsers().stream()
-                .anyMatch(u -> u.getEmail().equals(newUser.getEmail()))) {
-            return ResponseEntity.badRequest().body("Email already exists");
-        }
+    @PostMapping("/register/candidate")
+    public ResponseEntity<ApiResponse> registerCandidate(@Valid @RequestBody CandidateDTO candidateDTO) {
+        User user = authService.registerCandidate(candidateDTO);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ApiResponse(true, "Candidate registered successfully", user));
+    }
 
-        ArrayList<User> users = dataCache.getUsers();
-        users.add(newUser);
-        dataCache.setUsers(users);
-
-        // On demand sync with MongoDB
-        mongoDBService.saveDataToMongoDB();
-
-        String token = jwtService.generateToken(newUser);
-        return ResponseEntity.ok(Map.of("token", token, "user", newUser));
+    @PostMapping("/register/recruiter")
+    public ResponseEntity<ApiResponse> registerRecruiter(@Valid @RequestBody RecruiterDTO recruiterDTO) {
+        User user = authService.registerRecruiter(recruiterDTO);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ApiResponse(true, "Recruiter registered successfully", user));
     }
 }

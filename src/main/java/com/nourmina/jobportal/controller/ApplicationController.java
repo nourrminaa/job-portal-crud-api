@@ -1,119 +1,98 @@
 package com.nourmina.jobportal.controller;
 
-import com.nourmina.jobportal.cache.DataCache;
+import com.nourmina.jobportal.dto.ApiResponse;
+import com.nourmina.jobportal.dto.ApplicationDTO;
+import com.nourmina.jobportal.dto.ApplicationResponseDTO;
 import com.nourmina.jobportal.model.Application;
-import com.nourmina.jobportal.service.MongoDBService;
+import com.nourmina.jobportal.security.CurrentUser;
+import com.nourmina.jobportal.service.ApplicationService;
+import com.nourmina.jobportal.service.SecurityService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-import java.util.ArrayList;
-import java.util.stream.Collectors;
+
+import jakarta.validation.Valid;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/applications")
-@CrossOrigin(origins = "*")
 public class ApplicationController {
 
-    private final DataCache dataCache;
-    private final MongoDBService mongoDBService;
+    @Autowired
+    private ApplicationService applicationService;
 
-    public ApplicationController(DataCache dataCache, MongoDBService mongoDBService) {
-        this.dataCache = dataCache;
-        this.mongoDBService = mongoDBService;
-    }
+    @Autowired
+    private SecurityService securityService;
 
-    // Get all applications from cache
     @GetMapping
-    public ResponseEntity<ArrayList<Application>> getAllApplications() {
-        return ResponseEntity.ok(dataCache.getApplications());
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<Application>> getAllApplications() {
+        List<Application> applications = applicationService.getAllApplications();
+        return ResponseEntity.ok(applications);
     }
 
-    // Create new application and update cache
-    @PostMapping
-    public ResponseEntity<Application> createApplication(@RequestBody Application application) {
-        ArrayList<Application> applications = dataCache.getApplications();
-        applications.add(application);
-        dataCache.setApplications(applications);
-
-        // On demand sync with MongoDB
-        mongoDBService.saveDataToMongoDB();
-
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @securityService.isApplicationOwner(#id) or @securityService.isJobPostingRecruiter(#id)")
+    public ResponseEntity<Application> getApplicationById(@PathVariable String id) {
+        Application application = applicationService.getApplicationById(id);
         return ResponseEntity.ok(application);
     }
 
-    // Delete all applications and rewrite cache
-    @DeleteMapping
-    public ResponseEntity<Void> deleteAndRewriteApplications(@RequestBody ArrayList<Application> newApplications) {
-        dataCache.setApplications(newApplications);
-
-        // On demand sync with MongoDB
-        mongoDBService.saveDataToMongoDB();
-
-        return ResponseEntity.ok().build();
-    }
-
-    // Get application by ID
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getApplicationById(@PathVariable String id) {
-        return dataCache.getApplications().stream()
-                .filter(app -> app.getId().equals(id))
-                .findFirst()
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    // Update application status
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateApplication(@PathVariable String id, @RequestBody Application updatedApplication) {
-        ArrayList<Application> applications = dataCache.getApplications();
-        for (int i = 0; i < applications.size(); i++) {
-            if (applications.get(i).getId().equals(id)) {
-                applications.set(i, updatedApplication);
-                dataCache.setApplications(applications);
-
-                // On demand sync with MongoDB
-                mongoDBService.saveDataToMongoDB();
-
-                return ResponseEntity.ok(updatedApplication);
-            }
-        }
-        return ResponseEntity.notFound().build();
-    }
-
-    // Delete application by ID
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteApplication(@PathVariable String id) {
-        ArrayList<Application> applications = dataCache.getApplications();
-        boolean removed = applications.removeIf(app -> app.getId().equals(id));
-
-        if (removed) {
-            dataCache.setApplications(applications);
-
-            // On demand sync with MongoDB
-            mongoDBService.saveDataToMongoDB();
-
-            return ResponseEntity.ok().build();
-        } else {
-            return ResponseEntity.notFound().build();
-        }
-    }
-
-    // Get applications by candidate ID
     @GetMapping("/candidate/{candidateId}")
-    public ResponseEntity<ArrayList<Application>> getApplicationsByCandidateId(@PathVariable String candidateId) {
-        ArrayList<Application> candidateApplications = new ArrayList<>(dataCache.getApplications().stream()
-                .filter(app -> app.getCandidateId().equals(candidateId))
-                .collect(Collectors.toList()));
-
-        return ResponseEntity.ok(candidateApplications);
+    @PreAuthorize("hasRole('ADMIN') or @securityService.isCurrentUser(#candidateId)")
+    public ResponseEntity<List<ApplicationResponseDTO>> getApplicationsByCandidate(@PathVariable String candidateId) {
+        List<ApplicationResponseDTO> applications = applicationService.getApplicationsByCandidate(candidateId);
+        return ResponseEntity.ok(applications);
     }
 
-    // Get applications by job ID
-    @GetMapping("/job/{jobId}")
-    public ResponseEntity<ArrayList<Application>> getApplicationsByJobId(@PathVariable String jobId) {
-        ArrayList<Application> jobApplications = new ArrayList<>(dataCache.getApplications().stream()
-                .filter(app -> app.getJobPostingId().equals(jobId))
-                .collect(Collectors.toList()));
+    @GetMapping("/job-posting/{jobPostingId}")
+    @PreAuthorize("hasRole('ADMIN') or @securityService.isJobPostingRecruiter(#jobPostingId)")
+    public ResponseEntity<List<ApplicationResponseDTO>> getApplicationsByJobPosting(@PathVariable String jobPostingId) {
+        List<ApplicationResponseDTO> applications = applicationService.getApplicationsByJobPosting(jobPostingId);
+        return ResponseEntity.ok(applications);
+    }
 
-        return ResponseEntity.ok(jobApplications);
+    @GetMapping("/my-applications")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ResponseEntity<List<ApplicationResponseDTO>> getCurrentUserApplications(@CurrentUser UserDetails currentUser) {
+        String candidateId = securityService.getCurrentUserId(currentUser);
+        List<ApplicationResponseDTO> applications = applicationService.getApplicationsByCandidate(candidateId);
+        return ResponseEntity.ok(applications);
+    }
+
+    @PostMapping
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ResponseEntity<ApiResponse> applyForJob(
+            @Valid @RequestBody ApplicationDTO applicationDTO,
+            @CurrentUser UserDetails currentUser) {
+
+        // Ensure the candidate ID in the DTO matches the current user
+        String candidateId = securityService.getCurrentUserId(currentUser);
+        applicationDTO.setCandidateId(candidateId);
+
+        Application application = applicationService.apply(applicationDTO);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ApiResponse(true, "Application submitted successfully", application));
+    }
+
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasRole('RECRUITER') and @securityService.isJobPostingRecruiter(#id)")
+    public ResponseEntity<ApiResponse> updateApplicationStatus(
+            @PathVariable String id,
+            @RequestParam String status) {
+
+        Application updatedApplication = applicationService.updateApplicationStatus(id, status);
+        return ResponseEntity.ok(
+                new ApiResponse(true, "Application status updated successfully", updatedApplication));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @securityService.isApplicationOwner(#id)")
+    public ResponseEntity<ApiResponse> deleteApplication(@PathVariable String id) {
+        applicationService.deleteApplication(id);
+        return ResponseEntity.ok(new ApiResponse(true, "Application deleted successfully"));
     }
 }

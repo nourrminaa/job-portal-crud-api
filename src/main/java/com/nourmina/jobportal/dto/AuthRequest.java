@@ -1,9 +1,17 @@
-package com.nourmina.jobportal.model;
+package com.nourmina.jobportal.dto;
 
-public class LoginRequest {
+import jakarta.validation.constraints.*;
+
+public class AuthRequest {
+
+    @NotBlank(message = "Email is required")
+    @Email(message = "Please provide a valid email")
     private String email;
+
+    @NotBlank(message = "Password is required")
     private String password;
 
+    // Getters and Setters
     public String getEmail() {
         return email;
     }
