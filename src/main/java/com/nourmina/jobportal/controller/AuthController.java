@@ -3,6 +3,7 @@ package com.nourmina.jobportal.controller;
 import com.nourmina.jobportal.cache.DataCache;
 import com.nourmina.jobportal.model.User;
 import com.nourmina.jobportal.security.JwtService;
+import com.nourmina.jobportal.service.MongoDBService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
@@ -16,10 +17,12 @@ public class AuthController {
 
     private final DataCache dataCache;
     private final JwtService jwtService;
+    private final MongoDBService mongoDBService;
 
-    public AuthController(DataCache dataCache, JwtService jwtService) {
+    public AuthController(DataCache dataCache, JwtService jwtService, MongoDBService mongoDBService) {
         this.dataCache = dataCache;
         this.jwtService = jwtService;
+        this.mongoDBService = mongoDBService;
     }
 
     @PostMapping("/login")
@@ -46,6 +49,9 @@ public class AuthController {
         ArrayList<User> users = dataCache.getUsers();
         users.add(newUser);
         dataCache.setUsers(users);
+
+        // On demand sync with MongoDB
+        mongoDBService.saveDataToMongoDB();
 
         String token = jwtService.generateToken(newUser);
         return ResponseEntity.ok(Map.of("token", token, "user", newUser));

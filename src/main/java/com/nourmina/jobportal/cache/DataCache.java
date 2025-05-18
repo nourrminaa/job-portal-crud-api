@@ -6,41 +6,48 @@ import java.util.ArrayList;
 
 @Component
 public class DataCache {
-
     private final ArrayList<User> users = new ArrayList<>();
     private final ArrayList<JobPosting> jobs = new ArrayList<>();
     private final ArrayList<Application> applications = new ArrayList<>();
 
-    private boolean isDirty = false;
+    private volatile boolean isDirty = false;
 
-    public ArrayList<User> getUsers() {
-        return users;
+    // Synchronized getters and setters
+    public synchronized ArrayList<User> getUsers() {
+        return new ArrayList<>(users);
     }
 
-    public ArrayList<JobPosting> getJobs() {
-        return jobs;
-    }
-
-    public ArrayList<Application> getApplications() {
-        return applications;
-    }
-
-    public void setUsers(ArrayList<User> updatedUsers) {
+    public synchronized void setUsers(ArrayList<User> updatedUsers) {
         users.clear();
         users.addAll(updatedUsers);
         isDirty = true;
     }
 
-    public void setJobs(ArrayList<JobPosting> updatedJobs) {
+    public synchronized ArrayList<JobPosting> getJobs() {
+        return new ArrayList<>(jobs);
+    }
+
+    public synchronized void setJobs(ArrayList<JobPosting> updatedJobs) {
         jobs.clear();
         jobs.addAll(updatedJobs);
         isDirty = true;
     }
 
-    public void setApplications(ArrayList<Application> updatedApplications) {
+    public synchronized ArrayList<Application> getApplications() {
+        return new ArrayList<>(applications);
+    }
+
+    public synchronized void setApplications(ArrayList<Application> updatedApplications) {
         applications.clear();
         applications.addAll(updatedApplications);
         isDirty = true;
     }
 
+    public synchronized boolean isDirty() {
+        return isDirty;
+    }
+
+    public synchronized void setDirty(boolean dirty) {
+        this.isDirty = dirty;
+    }
 }

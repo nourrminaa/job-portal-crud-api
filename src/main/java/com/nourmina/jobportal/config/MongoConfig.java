@@ -6,12 +6,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.mapping.event.ValidatingMongoEventListener;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 @Configuration
+@EnableScheduling
 public class MongoConfig {
 
-    private static final String MONGODB_URI = "mongodb+srv://nourmina998:YXmiJ1aIiBbRvWUx@nourcluster.wmdrk7q.mongodb.net/jobportal?retryWrites=true&w=majority&appName=NourCluster";
+    private static final String MONGODB_URI ="mongodb+srv://nourmina998:YXmiJ1aIiBbRvWUx@nourcluster.wmdrk7q.mongodb.net/job_portal_db?retryWrites=true&w=majority&appName=NourCluster";
 
     @Bean
     public MongoClient mongoClient() {
@@ -21,5 +23,15 @@ public class MongoConfig {
     @Bean
     public MongoTemplate mongoTemplate() {
         return new MongoTemplate(mongoClient(), "jobportal");
+    }
+
+    @Bean
+    public ValidatingMongoEventListener validatingMongoEventListener() {
+        return new ValidatingMongoEventListener(validator());
+    }
+
+    @Bean
+    public LocalValidatorFactoryBean validator() {
+        return new LocalValidatorFactoryBean();
     }
 }
