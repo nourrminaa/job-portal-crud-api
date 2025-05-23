@@ -18,7 +18,6 @@ import java.util.Optional;
 @Service // tells spring this is a service class
 public class UserService {
 
-    @Autowired
     private UserRepository userRepository; // interface to talk to mongodb for User data
 
     private PasswordEncoder passwordEncoder; // to hash passwords before saving
