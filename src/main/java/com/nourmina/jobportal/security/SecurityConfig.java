@@ -17,40 +17,37 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
 @Configuration
-@EnableWebSecurity // tells Spring this class is for security configuration
+@EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
-
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
-    private final UserService userService;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtFilter, UserService userService) {
+    public SecurityConfig(JwtAuthenticationFilter jwtFilter) {
         this.jwtFilter = jwtFilter;
-        this.userService = userService;
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
-                .csrf(csrf -> csrf.disable()) // CSRF disabled: because we are using JWT (not sessions)
+                .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // JWT is stateless, we don't store sessions in backend
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll() // allow all users (even without a token) to access anything that starts with /auth/ (login and register)
-                        .anyRequest().authenticated() // all other endpoints must include a valid JWT token in the request
+                        .requestMatchers("/auth/**").permitAll()
+                        .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class) // before checking username+password, check if there's a valid JWT token in the header
-                .build(); // returns the full security setup to Spring
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .build();
     }
 
     @Bean
     public AuthenticationManager authManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager(); // allows Spring to handle user authentication using UserDetailsService (like UserService)
+        return config.getAuthenticationManager();
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(); // hashes the password securely using BCrypt
+        return new BCryptPasswordEncoder();
     }
 }

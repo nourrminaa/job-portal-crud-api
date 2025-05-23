@@ -17,10 +17,13 @@ import java.util.Optional;
 
 @Service // tells spring this is a service class
 public class UserService {
-
     private UserRepository userRepository; // interface to talk to mongodb for User data
-
     private PasswordEncoder passwordEncoder; // to hash passwords before saving
+
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
 
     // Create a new user
     public User createUser(User user) {
