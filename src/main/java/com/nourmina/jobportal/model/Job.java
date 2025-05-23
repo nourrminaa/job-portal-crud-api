@@ -1,15 +1,16 @@
-package com.example.jobportal.model;
+package com.nourmina.jobportal.model;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+
+import jakarta.validation.constraints.NotBlank; // for strings
+import jakarta.validation.constraints.NotNull; // for numbers
 
 import java.time.LocalDateTime;
-import java.io.Serializable;
+import java.io.Serializable; //
 
 @Document(collection = "jobs")
-public class Job implements Serializable {
+public class Job implements Serializable { // allows this class to be converted into a byte stream for saving
 
     @Id
     private String id;
@@ -24,23 +25,23 @@ public class Job implements Serializable {
     private String location;
 
     @NotBlank(message = "Job type is required")
-    private String jobType; // Full-time, Part-time, Contract, etc.
+    private String jobType; // Full-time, Part-time, Contract
 
     private Double salary;
 
     @NotBlank(message = "Description is required")
     private String description;
 
-    private String requiredSkills;
+    private String requiredSkills; // comma seperated skills
 
     private LocalDateTime postedAt;
 
     private String status; // OPEN, CLOSED, FILLED
 
-    @NotNull(message = "Posted by is required")
+    @NotBlank(message = "Posted by is required")
     private String postedBy; // User ID of recruiter
 
-    // Constructor with required fields
+    // Constructors
     public Job(String title, String company, String location, String jobType, String description, String postedBy) {
         this.title = title;
         this.company = company;
@@ -52,100 +53,44 @@ public class Job implements Serializable {
         this.status = "OPEN";
     }
 
-    // Default constructor
     public Job() {
         this.postedAt = LocalDateTime.now();
         this.status = "OPEN";
     }
 
     // Getters and Setters
-    public String getId() {
-        return id;
-    }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
 
-    public void setId(String id) {
-        this.id = id;
-    }
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
 
-    public String getTitle() {
-        return title;
-    }
+    public String getCompany() { return company; }
+    public void setCompany(String company) { this.company = company; }
 
-    public void setTitle(String title) {
-        this.title = title;
-    }
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
 
-    public String getCompany() {
-        return company;
-    }
+    public String getJobType() { return jobType; }
+    public void setJobType(String jobType) { this.jobType = jobType; }
 
-    public void setCompany(String company) {
-        this.company = company;
-    }
+    public Double getSalary() { return salary; }
+    public void setSalary(Double salary) { this.salary = salary; }
 
-    public String getLocation() {
-        return location;
-    }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
-    public void setLocation(String location) {
-        this.location = location;
-    }
+    public String getRequiredSkills() { return requiredSkills; }
+    public void setRequiredSkills(String requiredSkills) { this.requiredSkills = requiredSkills; }
 
-    public String getJobType() {
-        return jobType;
-    }
+    public LocalDateTime getPostedAt() { return postedAt; }
+    public void setPostedAt(LocalDateTime postedAt) { this.postedAt = postedAt; }
 
-    public void setJobType(String jobType) {
-        this.jobType = jobType;
-    }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
-    public Double getSalary() {
-        return salary;
-    }
-
-    public void setSalary(Double salary) {
-        this.salary = salary;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getRequiredSkills() {
-        return requiredSkills;
-    }
-
-    public void setRequiredSkills(String requiredSkills) {
-        this.requiredSkills = requiredSkills;
-    }
-
-    public LocalDateTime getPostedAt() {
-        return postedAt;
-    }
-
-    public void setPostedAt(LocalDateTime postedAt) {
-        this.postedAt = postedAt;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public String getPostedBy() {
-        return postedBy;
-    }
-
-    public void setPostedBy(String postedBy) {
-        this.postedBy = postedBy;
-    }
+    public String getPostedBy() { return postedBy; }
+    public void setPostedBy(String postedBy) { this.postedBy = postedBy; }
 
     @Override
     public String toString() {

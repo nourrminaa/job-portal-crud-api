@@ -1,9 +1,7 @@
-package com.example.jobportal.repository;
+package com.nourmina.jobportal.repository;
 
-import com.example.jobportal.model.Application;
+import com.nourmina.jobportal.model.Application;
 import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;

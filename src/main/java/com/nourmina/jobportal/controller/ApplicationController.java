@@ -1,7 +1,7 @@
-package com.example.jobportal.controller;
+package com.nourmina.jobportal.controller;
 
-import com.example.jobportal.model.Application;
-import com.example.jobportal.service.ApplicationService;
+import com.nourmina.jobportal.model.Application;
+import com.nourmina.jobportal.service.ApplicationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

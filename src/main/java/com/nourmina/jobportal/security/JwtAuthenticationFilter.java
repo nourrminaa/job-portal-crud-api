@@ -1,6 +1,6 @@
-package com.example.jobportal.security.filters;
+package com.nourmina.jobportal.security;
 
-import com.example.jobportal.security.JwtUtil;
+import com.nourmina.jobportal.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -17,6 +17,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Collections;
 
+// it runs ONCE per http request
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 

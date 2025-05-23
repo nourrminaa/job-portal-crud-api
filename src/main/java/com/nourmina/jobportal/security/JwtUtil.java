@@ -1,4 +1,4 @@
-package com.example.jobportal.security;
+package com.nourmina.jobportal.security;
 
 import io.jsonwebtoken.*;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,7 +13,7 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    @Value("${jwt.secret:27FDCA672F892A9A2184B95A2884527FDCA672F892A9A2184B95A28845}")
+    @Value("${jwt.secret:H3ll0Th1sIsMySup3rS3cretJWTKey2025!}")
     private String SECRET_KEY;
 
     @Value("${jwt.expiration:36000000}")

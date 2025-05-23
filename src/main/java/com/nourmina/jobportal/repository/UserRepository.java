@@ -1,6 +1,6 @@
-package com.example.jobportal.repository;
+package com.nourmina.jobportal.repository;
 
-import com.example.jobportal.model.User;
+import com.nourmina.jobportal.model.User;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 

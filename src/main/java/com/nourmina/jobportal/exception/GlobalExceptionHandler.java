@@ -1,81 +1,49 @@
-package com.nourmina.jobportal.exception;
+package com.nourmina.exception;
+
+import com.nourmina.jobportal.payload.ApiResponse; // the custom api reponse (succes/ error + message)
+
+import com.nourmina.jobportal.exception.BadRequestException;
+import com.nourmina.jobportal.exception.ResourceNotFoundException;
+import com.nourmina.jobportal.exception.ForbiddenException;
+import com.nourmina.jobportal.exception.UnauthorizedException;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.context.request.WebRequest;
-import com.nourmina.jobportal.payload.ApiResponse;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.HashMap;
-import java.util.Map;
-
-@ControllerAdvice
+// catches any exception in the controller and returns the error message customly made
+@RestControllerAdvice // global exception handler for REST controllers
+                    // when using this line, i don't need to recall this class anywhere this is why it is 'global'
 public class GlobalExceptionHandler {
 
-    // Handle validation exceptions
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Object> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach(error -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
-        });
-
-        ApiResponse apiResponse = new ApiResponse(false, "Validation failed", errors);
-        return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
-    }
-
-    // Handle resource not found exceptions
+    // not found (http 404)
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ApiResponse> handleResourceNotFoundException(ResourceNotFoundException ex, WebRequest request) {
-        ApiResponse apiResponse = new ApiResponse(false, ex.getMessage());
-        return new ResponseEntity<>(apiResponse, HttpStatus.NOT_FOUND);
+    public ResponseEntity<ApiResponse> handleNotFound(ResourceNotFoundException ex) {
+        return new ResponseEntity<>(new ApiResponse(false, ex.getMessage()), HttpStatus.NOT_FOUND);
     }
 
-    // Handle bad request exceptions
+    // invalid input (http 400)
     @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<ApiResponse> handleBadRequestException(BadRequestException ex, WebRequest request) {
-        ApiResponse apiResponse = new ApiResponse(false, ex.getMessage());
-        return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
+    public ResponseEntity<ApiResponse> handleBadRequest(BadRequestException ex) {
+        return new ResponseEntity<>(new ApiResponse(false, ex.getMessage()), HttpStatus.BAD_REQUEST);
     }
 
-    // Handle unauthorized exceptions
+    // unauthorized access (http 401)
     @ExceptionHandler(UnauthorizedException.class)
-    public ResponseEntity<ApiResponse> handleUnauthorizedException(UnauthorizedException ex, WebRequest request) {
-        ApiResponse apiResponse = new ApiResponse(false, ex.getMessage());
-        return new ResponseEntity<>(apiResponse, HttpStatus.UNAUTHORIZED);
+    public ResponseEntity<ApiResponse> handleUnauthorized(UnauthorizedException ex) {
+        return new ResponseEntity<>(new ApiResponse(false, ex.getMessage()), HttpStatus.UNAUTHORIZED);
     }
 
-    // Handle forbidden exceptions
+    // access denial (logged in but not allowed (http 403))
     @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<ApiResponse> handleForbiddenException(ForbiddenException ex, WebRequest request) {
-        ApiResponse apiResponse = new ApiResponse(false, ex.getMessage());
-        return new ResponseEntity<>(apiResponse, HttpStatus.FORBIDDEN);
+    public ResponseEntity<ApiResponse> handleForbidden(ForbiddenException ex) {
+        return new ResponseEntity<>(new ApiResponse(false, ex.getMessage()), HttpStatus.FORBIDDEN);
     }
 
-    // Handle bad credentials exceptions
-    @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ApiResponse> handleBadCredentialsException(BadCredentialsException ex, WebRequest request) {
-        ApiResponse apiResponse = new ApiResponse(false, "Invalid email or password");
-        return new ResponseEntity<>(apiResponse, HttpStatus.UNAUTHORIZED);
-    }
-
-    // Handle illegal argument exceptions
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiResponse> handleIllegalArgumentException(IllegalArgumentException ex, WebRequest request) {
-        ApiResponse apiResponse = new ApiResponse(false, ex.getMessage());
-        return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
-    }
-
-    // Handle generic exceptions
+    // catches all other unhandled exceptions (default)
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse> handleGlobalException(Exception ex, WebRequest request) {
-        ApiResponse apiResponse = new ApiResponse(false, "An unexpected error occurred. Please try again later.");
-        return new ResponseEntity<>(apiResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    public ResponseEntity<ApiResponse> handleAllOtherExceptions(Exception ex) {
+        return new ResponseEntity<>(new ApiResponse(false, "An unexpected error occurred."), HttpStatus.INTERNAL_SERVER_ERROR); // http 500
     }
 }

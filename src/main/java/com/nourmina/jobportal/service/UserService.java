@@ -1,66 +1,90 @@
-package com.example.jobportal.service;
+package com.nourmina.jobportal.service;
 
-import com.example.jobportal.model.User;
-import com.example.jobportal.repository.UserRepository;
+import com.nourmina.jobportal.exception.BadRequestException;
+import com.nourmina.jobportal.exception.ResourceNotFoundException;
+import com.nourmina.jobportal.exception.UnauthorizedException;
+
+import com.nourmina.jobportal.model.User;
+
+import com.nourmina.jobportal.repository.UserRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
-@Service
+@Service // tells spring this is a service class
 public class UserService {
 
     @Autowired
-    private UserRepository userRepository;
+    private UserRepository userRepository; // interface to talk to mongodb for User data
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private PasswordEncoder passwordEncoder; // to hash passwords before saving
 
     // Create a new user
     public User createUser(User user) {
         // Check if email already exists
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
-            throw new IllegalArgumentException("Email already exists");
+            throw new BadRequestException("Email already exists");
         }
 
         // Encode password
         user.setPassword(passwordEncoder.encode(user.getPassword()));
 
-        return userRepository.save(user);
+        return userRepository.save(user); // save to db
     }
 
     // Get user by ID
     public User getUserById(String id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+        Optional<User> optionalUser = userRepository.findById(id);
+
+        if (!optionalUser.isPresent()) {
+            throw new ResourceNotFoundException("User not found with id: " + id);
+        }
+
+        return optionalUser.get();
     }
 
     // Get user by email
     public User getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+        Optional<User> optionalUser = userRepository.findByEmail(email);
+
+        if (optionalUser.isPresent()) {
+            return optionalUser.get();
+        } else {
+            throw new ResourceNotFoundException("User not found with email: " + email);
+        }
     }
 
     // Update user
     public User updateUser(String id, User updatedUser) {
-        User existingUser = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+        Optional<User> optionalUser = userRepository.findById(id);
 
-        // Update fields
-        existingUser.setName(updatedUser.getName());
+        if (!optionalUser.isPresent()) {
+            throw new ResourceNotFoundException("User not found with id: " + id);
+        }
 
-        // Update role-specific fields
-        if ("RECRUITER".equals(existingUser.getRole())) {
+        User existingUser = optionalUser.get();
+
+        // Update email
+        existingUser.setEmail(updatedUser.getEmail());
+
+        // Update based on role
+        String role = existingUser.getRole();
+
+        if (role != null && role.equals("RECRUITER")) {
             existingUser.setCompany(updatedUser.getCompany());
-        } else if ("CANDIDATE".equals(existingUser.getRole())) {
+        } else if (role != null && role.equals("CANDIDATE")) {
             existingUser.setSkills(updatedUser.getSkills());
             existingUser.setResume(updatedUser.getResume());
         }
 
-        // Only update password if provided
-        if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
-            existingUser.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
+        // Update password if present
+        String newPassword = updatedUser.getPassword();
+        if (newPassword != null && !newPassword.isEmpty()) {
+            existingUser.setPassword(passwordEncoder.encode(newPassword));
         }
 
         return userRepository.save(existingUser);
@@ -78,11 +102,16 @@ public class UserService {
 
     // Authenticate user (for login)
     public User authenticate(String email, String password) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+        Optional<User> optionalUser = userRepository.findByEmail(email);
+
+        if (!optionalUser.isPresent()) {
+            throw new UnauthorizedException("Invalid email or password");
+        }
+
+        User user = optionalUser.get();
 
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new RuntimeException("Invalid email or password");
+            throw new UnauthorizedException("Invalid email or password");
         }
 
         return user;

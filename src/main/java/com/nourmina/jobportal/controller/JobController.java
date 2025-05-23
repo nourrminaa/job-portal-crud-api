@@ -1,8 +1,8 @@
-package com.example.jobportal.controller;
+package com.nourmina.jobportal.controller;
 
-import com.example.jobportal.dto.PaginatedResponse;
-import com.example.jobportal.model.Job;
-import com.example.jobportal.service.JobService;
+import com.nourmina.jobportal.dto.PaginatedResponse;
+import com.nourmina.jobportal.model.Job;
+import com.nourmina.jobportal.service.JobService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -54,10 +54,8 @@ public class JobController {
         return new PaginatedResponse<>(
                 jobPage.getContent(),
                 jobPage.getNumber(),
-                jobPage.getSize(),
-                jobPage.getTotalElements(),
                 jobPage.getTotalPages(),
-                jobPage.isLast()
+                jobPage.getTotalElements()
         );
     }
 
@@ -113,10 +111,8 @@ public class JobController {
         return new PaginatedResponse<>(
                 jobPage.getContent(),
                 jobPage.getNumber(),
-                jobPage.getSize(),
-                jobPage.getTotalElements(),
                 jobPage.getTotalPages(),
-                jobPage.isLast()
+                jobPage.getTotalElements()
         );
     }
 
@@ -136,10 +132,8 @@ public class JobController {
         return new PaginatedResponse<>(
                 jobPage.getContent(),
                 jobPage.getNumber(),
-                jobPage.getSize(),
-                jobPage.getTotalElements(),
                 jobPage.getTotalPages(),
-                jobPage.isLast()
+                jobPage.getTotalElements()
         );
     }
 }

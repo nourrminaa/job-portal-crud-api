@@ -1,9 +1,10 @@
-package com.example.jobportal.service;
+package com.nourmina.jobportal.service;
 
-import com.example.jobportal.model.Job;
-import com.example.jobportal.model.User;
-import com.example.jobportal.repository.JobRepository;
-import com.example.jobportal.repository.UserRepository;
+import com.nourmina.jobportal.model.Job;
+import com.nourmina.jobportal.model.User;
+import com.nourmina.jobportal.repository.JobRepository;
+import com.nourmina.jobportal.repository.UserRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -17,17 +18,16 @@ import java.util.Optional;
 @Service
 public class JobService {
 
-    @Autowired
-    private JobRepository jobRepository;
+    @Autowired private JobRepository jobRepository;
+    @Autowired private UserRepository userRepository;
 
-    @Autowired
-    private UserRepository userRepository;
-
-    // Create a new job
+    // Create a new job (RECRUITER ONLY)
     public Job createJob(Job job, String userId) {
-        // Verify user is a recruiter
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        Optional<User> optionalUser = userRepository.findById(userId);
+        if (!optionalUser.isPresent()) {
+            throw new RuntimeException("User not found");
+        }
+        User user = optionalUser.get();
 
         if (!"RECRUITER".equals(user.getRole())) {
             throw new IllegalArgumentException("Only recruiters can post jobs");
@@ -37,7 +37,6 @@ public class JobService {
         job.setPostedAt(LocalDateTime.now());
         job.setStatus("OPEN");
 
-        // Set company from user profile if not provided
         if (job.getCompany() == null || job.getCompany().isEmpty()) {
             job.setCompany(user.getCompany());
         }
@@ -45,7 +44,7 @@ public class JobService {
         return jobRepository.save(job);
     }
 
-    // Get all jobs with pagination and sorting
+    // Get all jobs with pagination and sorting (Everyone)
     public Page<Job> listJobs(String status, int page, int size, String sortBy, String sortDirection) {
         Sort sort = sortDirection.equalsIgnoreCase("asc") ?
                 Sort.by(sortBy).ascending() :
@@ -60,11 +59,13 @@ public class JobService {
         return jobRepository.findAll(pageable);
     }
 
-    // Get jobs posted by a specific recruiter
+    // Get jobs posted by a specific recruiter (RECRUITER ONLY)
     public Page<Job> getJobsByRecruiter(String userId, int page, int size, String sortBy, String sortDirection) {
-        // Verify user is a recruiter
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        Optional<User> optionalUser = userRepository.findById(userId);
+        if (!optionalUser.isPresent()) {
+            throw new RuntimeException("User not found");
+        }
+        User user = optionalUser.get();
 
         if (!"RECRUITER".equals(user.getRole())) {
             throw new IllegalArgumentException("User is not a recruiter");
@@ -78,60 +79,80 @@ public class JobService {
         return jobRepository.findByPostedBy(userId, pageable);
     }
 
-    // Get a job by ID
+    // Get a job by ID (open to all)
     public Optional<Job> getJob(String id) {
         return jobRepository.findById(id);
     }
 
-    // Update a job
+    // Update a job (RECRUITER ONLY + must be owner)
     public Job updateJob(Job job, String userId) {
-        // Verify job exists and user is the owner
-        Job existingJob = jobRepository.findById(job.getId())
-                .orElseThrow(() -> new RuntimeException("Job not found"));
+        Optional<Job> optionalJob = jobRepository.findById(job.getId());
+        if (!optionalJob.isPresent()) {
+            throw new RuntimeException("Job not found");
+        }
+        Job existingJob = optionalJob.get();
 
         if (!existingJob.getPostedBy().equals(userId)) {
             throw new IllegalArgumentException("You don't have permission to update this job");
         }
 
-        // Update fields but keep original poster and posted date
+        Optional<User> optionalUser = userRepository.findById(userId);
+        if (!optionalUser.isPresent()) {
+            throw new RuntimeException("User not found");
+        }
+        User user = optionalUser.get();
+
+        if (!"RECRUITER".equals(user.getRole())) {
+            throw new IllegalArgumentException("Only recruiters can update jobs");
+        }
+
         job.setPostedBy(existingJob.getPostedBy());
         job.setPostedAt(existingJob.getPostedAt());
 
         return jobRepository.save(job);
     }
 
-    // Delete a job
+    // Delete a job (RECRUITER ONLY + must be owner)
     public void deleteJob(String id, String userId) {
-        Job job = jobRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Job not found"));
+        Optional<Job> optionalJob = jobRepository.findById(id);
+        if (!optionalJob.isPresent()) {
+            throw new RuntimeException("Job not found");
+        }
+        Job job = optionalJob.get();
 
         if (!job.getPostedBy().equals(userId)) {
             throw new IllegalArgumentException("You don't have permission to delete this job");
         }
 
+        Optional<User> optionalUser = userRepository.findById(userId);
+        if (!optionalUser.isPresent()) {
+            throw new RuntimeException("User not found");
+        }
+        User user = optionalUser.get();
+
+        if (!"RECRUITER".equals(user.getRole())) {
+            throw new IllegalArgumentException("Only recruiters can delete jobs");
+        }
+
         jobRepository.deleteById(id);
     }
 
-    // Search jobs
+    // Search jobs (open to all)
     public Page<Job> searchJobs(String keyword, String location, String jobType, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
 
-        // If keyword is provided
         if (keyword != null && !keyword.isEmpty()) {
             return jobRepository.searchJobs(keyword, pageable);
         }
 
-        // If location is provided
         if (location != null && !location.isEmpty()) {
             return jobRepository.findByLocationContainingIgnoreCase(location, pageable);
         }
 
-        // If job type is provided
         if (jobType != null && !jobType.isEmpty()) {
             return jobRepository.findByJobTypeIgnoreCase(jobType, pageable);
         }
 
-        // Default: return all open jobs
         return jobRepository.findByStatus("OPEN", pageable);
     }
 }

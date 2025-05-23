@@ -1,19 +1,18 @@
-package com.example.jobportal.dto;
+package com.nourmina.jobportal.dto;
 
 import jakarta.validation.constraints.NotBlank;
 
-/**
- * DTO for login request
- */
+// DTO for login request from the user interface
+// takes the user credentials
 public class LoginRequestDTO {
 
-    @NotBlank(message = "Email is required")
+    @NotBlank(message = "Email is required") // validation
     private String email;
 
     @NotBlank(message = "Password is required")
     private String password;
 
-    // Constructors, getters, and setters
+    // constructors
     public LoginRequestDTO() {
     }
 
@@ -22,19 +21,10 @@ public class LoginRequestDTO {
         this.password = password;
     }
 
-    public String getEmail() {
-        return email;
-    }
+    // Getters and Setters
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
 }
